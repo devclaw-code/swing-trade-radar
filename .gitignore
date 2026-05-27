@@ -10,6 +10,7 @@ venv/
 *.db-journal
 *.db-wal
 *.db-shm
+backend/var/
 
 # Node
 node_modules/
