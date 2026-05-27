@@ -1,12 +1,15 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { LastUpdated } from "@/lib/api";
 import { fetchJson } from "@/lib/api";
 
 export function AutoRefreshBadge({ initial }: { initial: LastUpdated | null }) {
+  const router = useRouter();
   const [updated, setUpdated] = useState<LastUpdated | null>(initial);
-  const [stale, setStale] = useState(false);
+  const [lastVersion, setLastVersion] = useState<number>(initial?.version ?? 0);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -14,8 +17,14 @@ export function AutoRefreshBadge({ initial }: { initial: LastUpdated | null }) {
       try {
         const next = await fetchJson<LastUpdated>("/api/last-updated");
         if (cancelled) return;
-        if (initial && next.version > initial.version) setStale(true);
         setUpdated(next);
+        if (next.version > lastVersion) {
+          setLastVersion(next.version);
+          setRefreshing(true);
+          // Trigger Next.js server-component re-fetch; cards update in place.
+          router.refresh();
+          setTimeout(() => !cancelled && setRefreshing(false), 1500);
+        }
       } catch {
         // ignore polling errors
       }
@@ -25,25 +34,22 @@ export function AutoRefreshBadge({ initial }: { initial: LastUpdated | null }) {
       cancelled = true;
       clearInterval(id);
     };
-  }, [initial]);
+  }, [lastVersion, router]);
 
   return (
     <div className="text-right text-xs text-white/50">
       <div>
         Last update: <span className="font-mono">{updated?.ts ?? "—"}</span>
+        {refreshing && (
+          <span className="ml-2 inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-300">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+            Updating
+          </span>
+        )}
       </div>
       <div>
         v<span className="font-mono">{updated?.version ?? 0}</span> · errors{" "}
         <span className="font-mono">{updated?.errors ?? 0}</span>
-        {stale && (
-          <button
-            type="button"
-            onClick={() => window.location.reload()}
-            className="ml-2 rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-200 hover:bg-amber-500/25"
-          >
-            New data · refresh
-          </button>
-        )}
       </div>
     </div>
   );

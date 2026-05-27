@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     database_url: str = f"sqlite:///{DATA_DIR / 'swing.db'}"
 
     # --- Scheduler ---------------------------------------------------------
+    # Cron mode (default): refresh once per trading day shortly after US close.
+    refresh_cron_enabled: bool = True
+    refresh_cron_hour: int = 16
+    refresh_cron_minute: int = 5
+    market_timezone: str = "America/New_York"
+    # Interval mode (used when refresh_cron_enabled=False).
     refresh_interval_hours: int = 3
     refresh_on_boot: bool = True
 
