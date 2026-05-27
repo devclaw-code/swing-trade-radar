@@ -70,6 +70,23 @@ export interface BacktestResult {
   ran_at: string | null;
 }
 
+export interface OhlcvBar {
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface TickerDetail {
+  ticker: string;
+  ohlcv: OhlcvBar[];
+  signals: Signal[];
+  news: NewsItem[];
+  backtest: BacktestResult[];
+}
+
 export interface BacktestAllResponse {
   count: number;
   strategies: Record<string, BacktestResult[]>;
