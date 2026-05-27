@@ -40,9 +40,7 @@ def classify(signal: Signal) -> ClassifiedSignal:
     rr = (target_dist / stop_dist) if stop_dist else 0.0
 
     # Direction sanity: target should be on opposite side of stop relative to entry.
-    if direction == "LONG" and (target <= entry or stop >= entry):
-        risk = "HIGH"
-    elif direction == "SHORT" and (target >= entry or stop <= entry):
+    if (direction == "LONG" and (target <= entry or stop >= entry)) or (direction == "SHORT" and (target >= entry or stop <= entry)):
         risk = "HIGH"
     else:
         n = len(signal.confirmations)

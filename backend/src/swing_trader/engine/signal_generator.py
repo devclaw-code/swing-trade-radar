@@ -13,7 +13,12 @@ from ..data.db import Signal as SignalRow
 from ..data.db import session_scope
 from ..data.price_fetcher import load_ohlcv
 from ..strategies.base_strategy import BaseStrategy, Signal
+from ..strategies.bollinger_squeeze import BollingerSqueezeStrategy
 from ..strategies.ma_crossover import MaCrossoverStrategy
+from ..strategies.macd_trend import MacdTrendStrategy
+from ..strategies.rsi_mean_reversion import RsiMeanReversionStrategy
+from ..strategies.sr_breakout import SrBreakoutStrategy
+from ..strategies.volume_trend import VolumeTrendStrategy
 from .indicators import enrich
 from .risk_classifier import ClassifiedSignal, classify
 
@@ -24,7 +29,11 @@ def default_strategies() -> list[BaseStrategy]:
     """Strategy registry. Add new strategies here as they are implemented."""
     return [
         MaCrossoverStrategy(),
-        # rsi_mean_reversion, bollinger_squeeze, macd_trend, sr_breakout, volume_trend → TODO
+        BollingerSqueezeStrategy(),
+        MacdTrendStrategy(),
+        RsiMeanReversionStrategy(),
+        SrBreakoutStrategy(),
+        VolumeTrendStrategy(),
     ]
 
 
