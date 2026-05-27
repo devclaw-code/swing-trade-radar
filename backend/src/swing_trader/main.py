@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .api.routes import router as api_router
 from .config import settings
 from .data.db import Meta, Run, init_db, session_scope
+from .data.news_scraper import scrape_all as scrape_news
 from .data.price_fetcher import fetch_all
 from .engine.signal_generator import generate_all
 
@@ -41,6 +42,14 @@ def run_refresh_pipeline() -> dict:
         fetched = {}
 
     try:
+        news_summary = scrape_news()
+        log.info("news scraped: %s", news_summary)
+    except Exception as e:
+        log.exception("news scrape failed: %s", e)
+        errors += 1
+        news_summary = {}
+
+    try:
         summary = generate_all()
         errors += summary.get("errors", 0)
         n_signals = summary.get("n_signals", 0)
@@ -59,7 +68,9 @@ def run_refresh_pipeline() -> dict:
             run.finished_at = _dt.utcnow()
             run.n_signals = n_signals
             run.errors = errors
-            run.log_summary = str({"fetched": fetched, "signals": summary})[:4000]
+            run.log_summary = str(
+                {"fetched": fetched, "news": news_summary, "signals": summary}
+            )[:4000]
         v = s.get(Meta, "version")
         if v is None:
             s.add(Meta(key="version", value=1))
