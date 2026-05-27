@@ -47,6 +47,12 @@ export default async function Home() {
         </div>
       </header>
 
+      <div className="border-b border-amber-500/30 bg-amber-500/10 px-6 py-2 text-center text-xs text-amber-200">
+        ⚠️ <strong>Educational demo only.</strong> Not financial advice. Signals are
+        algorithmic outputs on historical data — do not trade real money based on this. Paper-trade,
+        backtest, and verify everything yourself.
+      </div>
+
       <section className="mx-auto max-w-7xl px-6 py-6">
         {error && (
           <div className="mb-4 rounded-lg border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-200">
