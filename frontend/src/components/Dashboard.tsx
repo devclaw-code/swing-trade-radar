@@ -205,10 +205,7 @@ export function Dashboard({
   async function runBacktest() {
     setRunning(true);
     try {
-      await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000"}/api/backtest/run`,
-        { method: "POST" },
-      );
+      await fetch("/api/backtest/run", { method: "POST" });
       setTimeout(() => window.location.reload(), 60_000);
     } catch (e) {
       console.error(e);

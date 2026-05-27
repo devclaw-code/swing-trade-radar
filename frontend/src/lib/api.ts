@@ -1,4 +1,10 @@
-export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
+// Default to relative URLs so both server-side (Next.js) and client-side
+// (browser) requests go through the Next dev/prod server, which rewrites
+// /api/* to the FastAPI backend (see next.config.ts).
+// On the server, relative URLs need a base — we use localhost:8080 (this app).
+export const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE ??
+  (typeof window === "undefined" ? "http://localhost:8080" : "");
 
 export type Risk = "LOW" | "MED" | "HIGH";
 export type Direction = "LONG" | "SHORT";
