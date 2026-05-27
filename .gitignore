@@ -28,3 +28,13 @@ build/
 .DS_Store
 .vscode/
 .idea/
+
+# Subagent workspace leak protection
+**/.openclaw/
+**/AGENTS.md
+**/SOUL.md
+**/IDENTITY.md
+**/USER.md
+**/TOOLS.md
+**/HEARTBEAT.md
+**/BOOTSTRAP.md
