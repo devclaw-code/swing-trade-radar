@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from sqlalchemy import select
@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api", tags=["api"])
 
 @router.get("/health")
 def health() -> dict:
-    return {"ok": True, "ts": datetime.utcnow().isoformat()}
+    return {"ok": True, "ts": datetime.now(UTC).replace(tzinfo=None).isoformat()}
 
 
 @router.get("/last-updated")

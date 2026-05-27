@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Emit a self-contained server bundle for Docker (`.next/standalone`).
+  output: "standalone",
+
   // Allow remote browsers (Azure VM public IP) to load dev HMR resources.
   allowedDevOrigins: ["4.154.152.152", "*.cloudapp.azure.com", "10.0.0.4"],
 

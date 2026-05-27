@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.date import DateTrigger
@@ -34,7 +34,7 @@ def start_scheduler(refresh_fn: Callable[[], dict]) -> BackgroundScheduler:
     if settings.refresh_on_boot:
         sched.add_job(
             refresh_fn,
-            DateTrigger(run_date=datetime.utcnow() + timedelta(seconds=5)),
+            DateTrigger(run_date=datetime.now(UTC).replace(tzinfo=None) + timedelta(seconds=5)),
             id="boot_refresh",
             replace_existing=True,
         )

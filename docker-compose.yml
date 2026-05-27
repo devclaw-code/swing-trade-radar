@@ -1,0 +1,35 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    image: swing-trade-radar-backend:latest
+    container_name: swing-trade-radar-backend
+    restart: unless-stopped
+    environment:
+      PYTHONUNBUFFERED: "1"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/var:/app/var
+    networks:
+      - default
+
+  frontend:
+    build:
+      context: ./frontend
+    image: swing-trade-radar-frontend:latest
+    container_name: swing-trade-radar-frontend
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: "http://backend:8000"
+      PORT: "8080"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - backend
+    networks:
+      - default
+
+networks:
+  default:
+    driver: bridge

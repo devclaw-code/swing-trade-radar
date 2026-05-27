@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 
 import numpy as np
 import pandas as pd
@@ -300,7 +300,7 @@ def backtest_strategy(
     """Walk-forward backtest one strategy on one ticker."""
     df = load_ohlcv(ticker, lookback_days=lookback_days)
     if df.empty:
-        today = datetime.utcnow().date()
+        today = datetime.now(UTC).date()
         return _aggregate([], strategy.name, ticker, today, today)
 
     df = enrich(df)
@@ -363,7 +363,7 @@ def _persist_result(result: BacktestResult) -> None:
                 max_dd_r=result.max_dd_r,
                 sharpe=result.sharpe,
                 avg_hold_bars=result.avg_hold_bars,
-                ran_at=datetime.utcnow(),
+                ran_at=datetime.now(UTC).replace(tzinfo=None),
             )
         )
 

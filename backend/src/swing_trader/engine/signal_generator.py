@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -113,7 +113,7 @@ def generate_all() -> dict:
     all_signals: list[Signal] = []
     per_ticker: dict[str, int] = {}
     errors = 0
-    started = datetime.utcnow()
+    started = datetime.now(UTC).replace(tzinfo=None)
 
     for ticker in settings.tickers:
         try:
@@ -139,7 +139,7 @@ def generate_all() -> dict:
     n = _persist(classified)
     return {
         "started_at": started.isoformat(),
-        "finished_at": datetime.utcnow().isoformat(),
+        "finished_at": datetime.now(UTC).replace(tzinfo=None).isoformat(),
         "n_signals": n,
         "per_ticker": per_ticker,
         "errors": errors,

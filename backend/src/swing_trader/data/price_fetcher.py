@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 import pandas as pd
 import yfinance as yf
@@ -139,6 +139,6 @@ def load_ohlcv(ticker: str, *, lookback_days: int | None = None) -> pd.DataFrame
     df["date"] = pd.to_datetime(df["date"])
     df = df.set_index("date")
     if lookback_days:
-        cutoff = datetime.utcnow() - timedelta(days=lookback_days)
+        cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=lookback_days)
         df = df[df.index >= cutoff]
     return df

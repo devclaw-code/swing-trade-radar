@@ -60,12 +60,13 @@ def run_refresh_pipeline() -> dict:
         summary = {}
 
     # Bump version + close run row.
+    from datetime import UTC
     from datetime import datetime as _dt
 
     with session_scope() as s:
         run = s.get(Run, run_id)
         if run:
-            run.finished_at = _dt.utcnow()
+            run.finished_at = _dt.now(UTC).replace(tzinfo=None)
             run.n_signals = n_signals
             run.errors = errors
             run.log_summary = str(

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Literal
 
 import pandas as pd
@@ -27,7 +27,9 @@ class Signal:
     confirmations: list[str] = field(default_factory=list)
     confidence: float = 0.5
     bar_date: date | None = None
-    generated_at: datetime = field(default_factory=datetime.utcnow)
+    generated_at: datetime = field(
+        default_factory=lambda: datetime.now(UTC).replace(tzinfo=None)
+    )
 
 
 def default_target(entry: float, stop: float, direction: Direction) -> float:

@@ -12,7 +12,7 @@ import asyncio
 import hashlib
 import logging
 import re
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import feedparser
@@ -140,7 +140,7 @@ def _entry_published(entry: Any) -> datetime:
                 return datetime(*tm[:6])
             except Exception:
                 continue
-    return datetime.utcnow()
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _source_from_url(url: str) -> str:
@@ -231,7 +231,7 @@ def scrape_all() -> dict[str, int]:
 
     # Purge old.
     purged = 0
-    cutoff = datetime.utcnow() - timedelta(days=settings.news_ttl_days)
+    cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=settings.news_ttl_days)
     with session_scope() as s:
         res = s.execute(delete(News).where(News.published_at < cutoff))
         purged = int(res.rowcount or 0)

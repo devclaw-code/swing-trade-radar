@@ -1,8 +1,14 @@
 """RSI mean reversion swing strategy on daily bars.
 
 Looks for oversold/overbought RSI extremes that align with the longer-term
-SMA50 trend — i.e. a pullback within an uptrend (or pop within a downtrend),
-not a counter-trend fade.
+trend regime (SMA50 vs SMA200) — i.e. a pullback within an established
+uptrend (or pop within an established downtrend), not a counter-trend fade.
+
+Note: we deliberately do NOT use ``close > sma50`` as the long trend filter.
+By the time RSI dips below 35, price has almost always pulled below SMA50 as
+well, so that combination is degenerate and fires ~never. The regime filter
+``sma50 > sma200`` captures "uptrend intact" without contradicting the
+oversold pullback itself.
 """
 
 from __future__ import annotations
@@ -19,7 +25,7 @@ class RsiMeanReversionStrategy(BaseStrategy):
         if df.empty or len(df) < 60:
             return []
         last = df.iloc[-1]
-        for col in ("rsi14", "sma50", "atr14", "close"):
+        for col in ("rsi14", "sma50", "sma200", "atr14", "close"):
             if pd.isna(last.get(col)):
                 return []
 
@@ -29,10 +35,14 @@ class RsiMeanReversionStrategy(BaseStrategy):
         entry = float(last["close"])
         atr = float(last["atr14"])
         sma50 = float(last["sma50"])
+        sma200 = float(last["sma200"])
         bar_date = last.name.date() if hasattr(last.name, "date") else last.name
 
-        long_setup = rsi < 35 and entry > sma50
-        short_setup = rsi > 68 and entry < sma50
+        uptrend = sma50 > sma200
+        downtrend = sma50 < sma200
+
+        long_setup = rsi < 35 and uptrend
+        short_setup = rsi > 68 and downtrend
 
         if long_setup:
             stop = entry - 2 * atr
@@ -40,7 +50,7 @@ class RsiMeanReversionStrategy(BaseStrategy):
                 return []
             confirmations = [
                 f"RSI {rsi:.1f} < 35 (oversold)",
-                "Price > SMA50 (trend filter)",
+                "SMA50 > SMA200 (uptrend regime)",
             ]
             if not pd.isna(last.get("ema21")) and entry > float(last["ema21"]):
                 confirmations.append("Price > EMA21 (short-term trend intact)")
@@ -67,7 +77,7 @@ class RsiMeanReversionStrategy(BaseStrategy):
                 return []
             confirmations = [
                 f"RSI {rsi:.1f} > 68 (overbought)",
-                "Price < SMA50 (trend filter)",
+                "SMA50 < SMA200 (downtrend regime)",
             ]
             if not pd.isna(last.get("ema21")) and entry < float(last["ema21"]):
                 confirmations.append("Price < EMA21 (short-term trend intact)")

@@ -26,6 +26,16 @@ cd backend && uv venv && uv sync && uv run python -m swing_trader.main
 cd frontend && pnpm i && pnpm dev
 ```
 
+## Run with Docker
+
+```bash
+docker compose up --build
+# frontend: http://localhost:8080
+# backend:  http://localhost:8000
+```
+
+The backend SQLite DB persists to `./backend/var/` on the host.
+
 ## License
 
 MIT
