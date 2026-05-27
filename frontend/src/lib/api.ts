@@ -2,6 +2,7 @@ export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:80
 
 export type Risk = "LOW" | "MED" | "HIGH";
 export type Direction = "LONG" | "SHORT";
+export type Sentiment = "pos" | "neu" | "neg";
 
 export interface Signal {
   id: number;
@@ -29,6 +30,43 @@ export interface LastUpdated {
   version: number;
   ts: string | null;
   errors: number;
+}
+
+export interface NewsItem {
+  id: number;
+  title: string;
+  summary: string;
+  source: string;
+  url: string;
+  published_at: string | null;
+  tickers: string[];
+  sentiment: Sentiment;
+  sentiment_score: number;
+}
+
+export interface NewsResponse {
+  count: number;
+  news: NewsItem[];
+}
+
+export interface BacktestResult {
+  strategy: string;
+  ticker: string;
+  period_start: string;
+  period_end: string;
+  n_trades: number;
+  win_rate: number;
+  avg_r: number;
+  profit_factor: number;
+  max_dd_r: number;
+  sharpe: number;
+  avg_hold_bars: number;
+  ran_at: string | null;
+}
+
+export interface BacktestAllResponse {
+  count: number;
+  strategies: Record<string, BacktestResult[]>;
 }
 
 export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
