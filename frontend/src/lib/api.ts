@@ -6,6 +6,105 @@ export const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ??
   (typeof window === "undefined" ? "http://localhost:8080" : "");
 
+// Set NEXT_PUBLIC_USE_MOCKS=1 to bypass network and serve `mock-verdicts`.
+// Also auto-falls back to mocks if a fetch errors (dev-only convenience).
+export const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === "1";
+
+// ------------------------------------------------------------
+// Phase-2 verdict types
+// ------------------------------------------------------------
+
+export type VerdictKind = "BUY" | "WATCH" | "AVOID" | "NO_SETUP";
+export type RiskTier = "LOW" | "MEDIUM" | "HIGH";
+export type VixTermStructure = "contango" | "backwardation" | "flat";
+
+export interface PriceMethod {
+  price: number;
+  method: string;
+}
+
+export interface StopLoss extends PriceMethod {
+  risk_pct: number;
+}
+
+export interface TargetSpec extends PriceMethod {
+  rr: number;
+}
+
+export interface RegimeContext {
+  spy_above_200sma: boolean;
+  qqq_above_200sma: boolean;
+  vix: number;
+  vix_term_structure: VixTermStructure;
+  regime_verdict: string;
+}
+
+export interface EvidenceItem {
+  factor: string;
+  value: string;
+  weight: number;
+  passed: boolean;
+  note: string;
+}
+
+export interface BaseRate {
+  occurrences: number;
+  win_rate: number;
+  avg_r: number;
+  median_hold: number;
+}
+
+export interface WhyBlock {
+  headline: string;
+  evidence: EvidenceItem[];
+  historical_base_rate: BaseRate | null;
+  what_could_invalidate: string[];
+  counter_arguments: string[];
+  doc_refs: string[];
+}
+
+export interface Verdict {
+  ticker: string;
+  as_of: string;
+  verdict: VerdictKind;
+  conviction: number;
+  primary_setup: string | null;
+  supporting_setups: string[];
+  entry_zone: PriceMethod | null;
+  stop_loss: StopLoss | null;
+  target: TargetSpec | null;
+  max_hold: string | null;
+  position_size_hint: string | null;
+  regime_context: RegimeContext;
+  why: WhyBlock;
+  risk_tier: RiskTier;
+  // Optional fields the backend may include for richer rendering.
+  price?: number;
+  day_change_pct?: number;
+  sparkline?: number[];
+}
+
+export interface StrategySummary {
+  id: string; // S1..S5
+  name: string;
+  description: string;
+  doc_refs: string[];
+  backtest: {
+    sharpe: number;
+    deflated_sharpe: number;
+    win_rate: number;
+    avg_r: number;
+    max_dd_r: number;
+    n_trades: number;
+    profit_factor: number;
+  } | null;
+}
+
+// ------------------------------------------------------------
+// Legacy phase-1 types (kept for backwards compat; the ticker
+// detail page still consumes some of them).
+// ------------------------------------------------------------
+
 export type Risk = "LOW" | "MED" | "HIGH";
 export type Direction = "LONG" | "SHORT";
 export type Sentiment = "pos" | "neu" | "neg";
@@ -85,6 +184,10 @@ export interface TickerDetail {
   signals: Signal[];
   news: NewsItem[];
   backtest: BacktestResult[];
+  // Optional phase-2 enrichment:
+  verdict?: Verdict;
+  strategies_evaluated?: { id: string; name: string; fired: boolean; reason: string }[];
+  past_verdicts?: { as_of: string; verdict: VerdictKind; conviction: number }[];
 }
 
 export interface BacktestAllResponse {
@@ -92,10 +195,89 @@ export interface BacktestAllResponse {
   strategies: Record<string, BacktestResult[]>;
 }
 
+// ------------------------------------------------------------
+// Fetcher
+// ------------------------------------------------------------
+
 export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, { cache: "no-store", ...init });
   if (!res.ok) {
     throw new Error(`${res.status} ${res.statusText} :: ${path}`);
   }
   return (await res.json()) as T;
+}
+
+/** SWR-friendly fetcher: throws on non-2xx, returns parsed JSON. */
+export const swrFetcher = async <T>(path: string): Promise<T> => fetchJson<T>(path);
+
+// ------------------------------------------------------------
+// Phase-2 endpoint helpers
+// ------------------------------------------------------------
+
+export interface VerdictsResponse {
+  count: number;
+  as_of: string;
+  verdicts: Verdict[];
+}
+
+export interface RegimeResponse extends RegimeContext {
+  as_of: string;
+}
+
+export interface StrategiesResponse {
+  count: number;
+  strategies: StrategySummary[];
+}
+
+async function withMockFallback<T>(path: string, mock: () => T): Promise<T> {
+  if (USE_MOCKS) return mock();
+  try {
+    return await fetchJson<T>(path);
+  } catch (e) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.warn(`[api] ${path} failed, falling back to mocks:`, e);
+      return mock();
+    }
+    throw e;
+  }
+}
+
+export async function getVerdicts(): Promise<VerdictsResponse> {
+  const { mockVerdicts, mockAsOf } = await import("./mock-verdicts");
+  return withMockFallback("/api/verdicts", () => ({
+    count: mockVerdicts.length,
+    as_of: mockAsOf,
+    verdicts: mockVerdicts,
+  }));
+}
+
+export async function getVerdict(ticker: string): Promise<Verdict> {
+  const { mockVerdicts } = await import("./mock-verdicts");
+  return withMockFallback(`/api/verdicts/${ticker.toUpperCase()}`, () => {
+    const v = mockVerdicts.find((m) => m.ticker === ticker.toUpperCase());
+    if (!v) throw new Error(`404 mock not found :: ${ticker}`);
+    return v;
+  });
+}
+
+export async function getRegime(): Promise<RegimeResponse> {
+  const { mockRegime, mockAsOf } = await import("./mock-verdicts");
+  return withMockFallback("/api/regime", () => ({ ...mockRegime, as_of: mockAsOf }));
+}
+
+export async function getStrategies(): Promise<StrategiesResponse> {
+  const { mockStrategies } = await import("./mock-verdicts");
+  return withMockFallback("/api/strategies", () => ({
+    count: mockStrategies.length,
+    strategies: mockStrategies,
+  }));
+}
+
+export async function getLastUpdated(): Promise<LastUpdated> {
+  return withMockFallback("/api/last-updated", () => ({
+    version: 1,
+    ts: new Date().toISOString(),
+    errors: 0,
+  }));
 }
