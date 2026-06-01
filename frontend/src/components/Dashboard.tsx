@@ -32,8 +32,8 @@ interface Props {
 function pillClass(active: boolean) {
   return `rounded-full border px-3 py-1 text-xs font-semibold transition ${
     active
-      ? "bg-white/15 text-white border-white/30"
-      : "bg-transparent text-white/50 border-white/10 hover:text-white/80"
+      ? "border-sky-500 bg-sky-500/20 text-sky-200"
+      : "border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600 hover:bg-slate-800 hover:text-slate-100"
   }`;
 }
 
@@ -92,9 +92,9 @@ export function Dashboard({ initialVerdicts, initialRegime, initialUpdated }: Pr
       <RegimeCard regime={regime} asOf={asOf} />
 
       {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-white/10 bg-white/[0.03] p-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-700/60 bg-slate-900 p-3">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] uppercase tracking-wide text-white/40">Verdict</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Verdict</span>
           {(
             [
               ["all", `All (${verdicts.length})`],
@@ -115,7 +115,7 @@ export function Dashboard({ initialVerdicts, initialRegime, initialUpdated }: Pr
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-[10px] uppercase tracking-wide text-white/40">Risk</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Risk</span>
           {(["all", "LOW", "MEDIUM", "HIGH"] as const).map((r) => (
             <button
               key={r}
@@ -129,7 +129,7 @@ export function Dashboard({ initialVerdicts, initialRegime, initialUpdated }: Pr
         </div>
 
         <div className="ml-auto flex items-center gap-2">
-          <label htmlFor="ticker-search" className="text-[10px] uppercase tracking-wide text-white/40">
+          <label htmlFor="ticker-search" className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
             Ticker
           </label>
           <input
@@ -138,14 +138,14 @@ export function Dashboard({ initialVerdicts, initialRegime, initialUpdated }: Pr
             placeholder="NVDA…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-32 rounded-md border border-white/10 bg-white/5 px-2 py-1 font-mono text-xs uppercase text-white placeholder:text-white/30 focus:border-white/30 focus:outline-none"
+            className="w-32 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-xs uppercase text-slate-100 placeholder:text-slate-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
           />
         </div>
       </div>
 
       {/* Grid */}
       {sorted.length === 0 ? (
-        <div className="rounded-lg border border-white/10 bg-white/5 p-10 text-center text-white/60">
+        <div className="rounded-lg border border-slate-700/60 bg-slate-900 p-10 text-center text-slate-400">
           No verdicts match the current filters.
         </div>
       ) : (
@@ -156,9 +156,9 @@ export function Dashboard({ initialVerdicts, initialRegime, initialUpdated }: Pr
         </div>
       )}
 
-      <div className="text-right text-[11px] text-white/40">
+      <div className="text-right text-[11px] text-slate-500">
         Auto-refresh every 60s · Last server version{" "}
-        <span className="font-mono">{initialUpdated?.version ?? 0}</span>
+        <span className="font-mono text-slate-400">{initialUpdated?.version ?? 0}</span>
       </div>
     </div>
   );

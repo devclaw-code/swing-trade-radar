@@ -8,9 +8,9 @@ function tone(regime: RegimeContext): "favorable" | "cautious" | "unfavorable" {
 }
 
 const toneStyles: Record<ReturnType<typeof tone>, string> = {
-  favorable: "border-emerald-500/40 bg-emerald-500/10",
-  cautious: "border-amber-500/40 bg-amber-500/10",
-  unfavorable: "border-rose-500/40 bg-rose-500/10",
+  favorable: "border-emerald-500/50 bg-emerald-950",
+  cautious: "border-amber-500/50 bg-amber-950",
+  unfavorable: "border-rose-500/50 bg-rose-950",
 };
 
 const toneLabel: Record<ReturnType<typeof tone>, string> = {
@@ -20,9 +20,15 @@ const toneLabel: Record<ReturnType<typeof tone>, string> = {
 };
 
 const toneBadge: Record<ReturnType<typeof tone>, string> = {
-  favorable: "bg-emerald-500/20 text-emerald-200",
-  cautious: "bg-amber-500/20 text-amber-200",
-  unfavorable: "bg-rose-500/20 text-rose-200",
+  favorable: "bg-emerald-500 text-emerald-950 border-emerald-400",
+  cautious: "bg-amber-500 text-amber-950 border-amber-400",
+  unfavorable: "bg-rose-600 text-white border-rose-500",
+};
+
+const toneAccent: Record<ReturnType<typeof tone>, string> = {
+  favorable: "text-emerald-300",
+  cautious: "text-amber-300",
+  unfavorable: "text-rose-300",
 };
 
 function CheckRow({ label, ok }: { label: string; ok: boolean }) {
@@ -30,13 +36,13 @@ function CheckRow({ label, ok }: { label: string; ok: boolean }) {
     <div className="flex items-center gap-2 text-sm">
       <span
         className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold ${
-          ok ? "bg-emerald-500/30 text-emerald-100" : "bg-rose-500/30 text-rose-100"
+          ok ? "bg-emerald-500 text-white" : "bg-rose-500 text-white"
         }`}
         aria-hidden
       >
         {ok ? "✓" : "✕"}
       </span>
-      <span className="text-white/80">{label}</span>
+      <span className="text-slate-100">{label}</span>
     </div>
   );
 }
@@ -46,18 +52,20 @@ export function RegimeCard({ regime, asOf }: { regime: RegimeContext; asOf?: str
   return (
     <section
       aria-label="Market regime"
-      className={`rounded-xl border p-5 backdrop-blur ${toneStyles[t]}`}
+      className={`rounded-xl border-2 p-5 shadow-lg ${toneStyles[t]}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="text-[10px] uppercase tracking-wider text-white/50">Market regime</div>
-          <h2 className="mt-1 text-xl font-semibold text-white">
+          <div className={`text-[10px] font-semibold uppercase tracking-wider ${toneAccent[t]}`}>
+            Market regime
+          </div>
+          <h2 className="mt-1 text-xl font-bold text-slate-50">
             {regime.regime_verdict.charAt(0).toUpperCase() + regime.regime_verdict.slice(1)}
           </h2>
-          {asOf && <div className="mt-0.5 text-xs text-white/50">As of {asOf}</div>}
+          {asOf && <div className="mt-0.5 text-xs text-slate-400">As of {asOf}</div>}
         </div>
         <span
-          className={`rounded-md px-2.5 py-1 text-xs font-semibold uppercase ${toneBadge[t]}`}
+          className={`rounded-md border px-2.5 py-1 text-xs font-bold uppercase tracking-wide ${toneBadge[t]}`}
         >
           {toneLabel[t]}
         </span>
@@ -67,12 +75,12 @@ export function RegimeCard({ regime, asOf }: { regime: RegimeContext; asOf?: str
         <CheckRow label="SPY > 200-SMA" ok={regime.spy_above_200sma} />
         <CheckRow label="QQQ > 200-SMA" ok={regime.qqq_above_200sma} />
         <div className="text-sm">
-          <span className="text-white/60">VIX </span>
-          <span className="font-mono font-semibold text-white">{regime.vix.toFixed(1)}</span>
+          <span className="text-slate-400">VIX </span>
+          <span className="font-mono font-semibold text-slate-50">{regime.vix.toFixed(1)}</span>
         </div>
         <div className="text-sm">
-          <span className="text-white/60">Term </span>
-          <span className="font-mono font-semibold text-white capitalize">
+          <span className="text-slate-400">Term </span>
+          <span className="font-mono font-semibold capitalize text-slate-50">
             {regime.vix_term_structure}
           </span>
         </div>

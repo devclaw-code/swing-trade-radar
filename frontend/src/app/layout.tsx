@@ -37,10 +37,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col bg-zinc-950 text-zinc-100">
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`} data-theme="dark">
+      <body className="flex min-h-full flex-col bg-slate-950 text-slate-100">
         <SiteNav />
-        <div className="border-b border-amber-500/30 bg-amber-500/10 px-6 py-1.5 text-center text-[11px] text-amber-200">
+        <div className="border-b border-amber-500/40 bg-amber-900/40 px-6 py-1.5 text-center text-[11px] font-medium text-amber-200">
           Educational research desk — not financial advice. Paper-trade only.
         </div>
         <main className="flex-1">{children}</main>

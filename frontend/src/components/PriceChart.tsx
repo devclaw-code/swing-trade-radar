@@ -28,16 +28,16 @@ export function PriceChart({ ohlcv, signals = [], height = 400 }: Props) {
       width: el.clientWidth,
       height,
       layout: {
-        background: { color: "#09090b" }, // zinc-950
-        textColor: "#a1a1aa", // zinc-400
+        background: { color: "#020617" }, // slate-950
+        textColor: "#cbd5e1", // slate-300
       },
       grid: {
-        vertLines: { color: "rgba(255,255,255,0.04)" },
-        horzLines: { color: "rgba(255,255,255,0.04)" },
+        vertLines: { color: "rgba(51,65,85,0.4)" },  // slate-700
+        horzLines: { color: "rgba(51,65,85,0.4)" },
       },
-      rightPriceScale: { borderColor: "rgba(255,255,255,0.1)" },
+      rightPriceScale: { borderColor: "#334155" },
       timeScale: {
-        borderColor: "rgba(255,255,255,0.1)",
+        borderColor: "#334155",
         timeVisible: false,
       },
       crosshair: { mode: 1 },

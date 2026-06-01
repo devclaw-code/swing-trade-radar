@@ -37,19 +37,19 @@ export function AutoRefreshBadge({ initial }: { initial: LastUpdated | null }) {
   }, [lastVersion, router]);
 
   return (
-    <div className="text-right text-xs text-white/50">
+    <div className="text-right text-xs text-slate-400">
       <div>
-        Last update: <span className="font-mono">{updated?.ts ?? "—"}</span>
+        Last update: <span className="font-mono text-slate-200">{updated?.ts ?? "—"}</span>
         {refreshing && (
-          <span className="ml-2 inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-300">
+          <span className="ml-2 inline-flex items-center gap-1 rounded-md border border-emerald-500/50 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-300">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
             Updating
           </span>
         )}
       </div>
       <div>
-        v<span className="font-mono">{updated?.version ?? 0}</span> · errors{" "}
-        <span className="font-mono">{updated?.errors ?? 0}</span>
+        v<span className="font-mono text-slate-300">{updated?.version ?? 0}</span> · errors{" "}
+        <span className="font-mono text-slate-300">{updated?.errors ?? 0}</span>
       </div>
     </div>
   );

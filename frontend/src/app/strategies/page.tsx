@@ -26,10 +26,10 @@ function StatBox({
       ? "text-emerald-300"
       : tone === "bad"
         ? "text-rose-300"
-        : "text-white";
+        : "text-slate-50";
   return (
-    <div className="rounded-md border border-white/10 bg-white/[0.03] px-3 py-2">
-      <div className="text-[10px] uppercase tracking-wide text-white/40">{label}</div>
+    <div className="rounded-md border border-slate-700/60 bg-slate-950 px-3 py-2">
+      <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</div>
       <div className={`mt-0.5 font-mono text-sm font-semibold ${cls}`}>{value}</div>
     </div>
   );
@@ -46,10 +46,10 @@ export default async function StrategiesPage() {
 
   return (
     <>
-      <header className="border-b border-white/10 px-6 py-5">
+      <header className="border-b border-slate-700/60 bg-slate-900 px-6 py-5">
         <div className="mx-auto max-w-5xl">
-          <h1 className="text-2xl font-bold tracking-tight">Strategies</h1>
-          <p className="text-sm text-white/55">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-50">Strategies</h1>
+          <p className="text-sm text-slate-400">
             Each verdict is the synthesis of these five rule-based strategies. Each must pass a
             walk-forward backtest with deflated Sharpe ≥ 1.0 before going live.
           </p>
@@ -58,7 +58,7 @@ export default async function StrategiesPage() {
 
       <section className="mx-auto max-w-5xl space-y-5 px-6 py-6">
         {error && (
-          <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-200">
+          <div className="rounded-lg border border-rose-500/60 bg-rose-950 p-3 text-sm text-rose-200">
             {error}
           </div>
         )}
@@ -66,23 +66,23 @@ export default async function StrategiesPage() {
         {payload.strategies.map((s) => (
           <article
             key={s.id}
-            className="rounded-xl border border-white/10 bg-white/[0.03] p-5 shadow-lg"
+            className="rounded-xl border border-slate-700/60 bg-slate-900 p-5 shadow-lg transition hover:border-slate-600"
           >
             <header className="flex flex-wrap items-baseline justify-between gap-3">
-              <h2 className="text-lg font-semibold text-white">
-                <span className="font-mono text-white/40">{s.id}</span> · {s.name}
+              <h2 className="text-lg font-bold text-slate-50">
+                <span className="font-mono text-slate-500">{s.id}</span> · {s.name}
               </h2>
-              <div className="text-[11px] text-white/40">
+              <div className="text-[11px] text-slate-500">
                 {s.doc_refs.map((d, i) => (
                   <span key={d}>
-                    {i > 0 && <span className="mx-1 text-white/20">·</span>}
+                    {i > 0 && <span className="mx-1 text-slate-700">·</span>}
                     <span className="font-mono">{d}</span>
                   </span>
                 ))}
               </div>
             </header>
 
-            <p className="mt-2 text-sm leading-relaxed text-white/75">{s.description}</p>
+            <p className="mt-2 text-sm leading-relaxed text-slate-200">{s.description}</p>
 
             {s.backtest ? (
               <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
@@ -103,7 +103,7 @@ export default async function StrategiesPage() {
                 <StatBox label="Trades" value={String(s.backtest.n_trades)} />
               </div>
             ) : (
-              <div className="mt-3 text-xs text-white/45">No backtest results yet.</div>
+              <div className="mt-3 text-xs text-slate-500">No backtest results yet.</div>
             )}
           </article>
         ))}

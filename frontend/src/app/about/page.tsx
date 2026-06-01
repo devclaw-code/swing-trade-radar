@@ -51,27 +51,27 @@ const RISK_WARNINGS = [
 export default function AboutPage() {
   return (
     <>
-      <header className="border-b border-white/10 px-6 py-5">
+      <header className="border-b border-slate-700/60 bg-slate-900 px-6 py-5">
         <div className="mx-auto max-w-3xl">
-          <h1 className="text-2xl font-bold tracking-tight">About / Methodology</h1>
-          <p className="text-sm text-white/55">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-50">About / Methodology</h1>
+          <p className="text-sm text-slate-400">
             What this is, what it isn&apos;t, and how to read the verdicts.
           </p>
         </div>
       </header>
 
       <section className="mx-auto max-w-3xl space-y-8 px-6 py-8">
-        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-100">
+        <div className="rounded-xl border border-amber-500/50 bg-amber-950 p-4 text-sm text-amber-100">
           <strong className="text-amber-50">This is a research desk, not a broker.</strong> Swing
           Trade Radar produces daily algorithmic verdicts on a fixed list of NDX-100 mega-caps. It
           does not place trades, it does not know your account, and it is{" "}
-          <strong>not financial advice</strong>. Educational use only — paper-trade and verify
+          <strong className="text-amber-50">not financial advice</strong>. Educational use only — paper-trade and verify
           everything yourself.
         </div>
 
         <div>
-          <h2 className="mb-2 text-lg font-semibold">How a verdict is built</h2>
-          <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-white/80">
+          <h2 className="mb-2 text-lg font-bold text-slate-50">How a verdict is built</h2>
+          <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-slate-200">
             <li>
               Daily OHLCV is fetched (yfinance primary, Alpha Vantage fallback) and cached in SQLite.
             </li>
@@ -99,29 +99,29 @@ export default function AboutPage() {
         </div>
 
         <div>
-          <h2 className="mb-2 text-lg font-semibold">The five strategies</h2>
+          <h2 className="mb-2 text-lg font-bold text-slate-50">The five strategies</h2>
           <ul className="space-y-3">
             {STRATEGIES.map((s) => (
               <li
                 key={s.id}
-                className="rounded-md border border-white/10 bg-white/[0.03] px-4 py-3"
+                className="rounded-md border border-slate-700/60 bg-slate-900 px-4 py-3 transition hover:border-slate-600"
               >
-                <div className="text-sm font-semibold text-white">
-                  <span className="font-mono text-white/40">{s.id}</span> · {s.name}
+                <div className="text-sm font-semibold text-slate-50">
+                  <span className="font-mono text-slate-500">{s.id}</span> · {s.name}
                 </div>
-                <div className="mt-0.5 text-sm text-white/70">{s.philosophy}</div>
+                <div className="mt-0.5 text-sm text-slate-300">{s.philosophy}</div>
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-sm text-white/60">
-            See <Link href="/strategies" className="text-sky-300 hover:underline">Strategies</Link>{" "}
+          <p className="mt-3 text-sm text-slate-400">
+            See <Link href="/strategies" className="text-sky-400 hover:text-sky-300 hover:underline">Strategies</Link>{" "}
             for current backtest stats (Sharpe, deflated Sharpe, win rate, max DD).
           </p>
         </div>
 
         <div>
-          <h2 className="mb-2 text-lg font-semibold">Risk warnings</h2>
-          <ul className="list-disc space-y-2 pl-5 text-sm text-white/75">
+          <h2 className="mb-2 text-lg font-bold text-slate-50">Risk warnings</h2>
+          <ul className="list-disc space-y-2 pl-5 text-sm text-slate-200">
             {RISK_WARNINGS.map((w) => (
               <li key={w}>{w}</li>
             ))}
@@ -129,14 +129,14 @@ export default function AboutPage() {
         </div>
 
         <div>
-          <h2 className="mb-2 text-lg font-semibold">Source research</h2>
-          <p className="text-sm text-white/70">
+          <h2 className="mb-2 text-lg font-bold text-slate-50">Source research</h2>
+          <p className="text-sm text-slate-300">
             Every doc-ref attached to a verdict points back into the underlying research. Start at{" "}
             <a
               href={`${REPO}blob/main/research/00-INDEX.md`}
               target="_blank"
               rel="noreferrer"
-              className="font-mono text-sky-300 hover:underline"
+              className="font-mono text-sky-400 hover:text-sky-300 hover:underline"
             >
               research/00-INDEX.md
             </a>
@@ -144,8 +144,8 @@ export default function AboutPage() {
           </p>
         </div>
 
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-xs text-white/55">
-          <strong className="text-white/75">Disclaimer.</strong> Swing Trade Radar is provided{" "}
+        <div className="rounded-xl border border-slate-700/60 bg-slate-900 p-4 text-xs text-slate-400">
+          <strong className="text-slate-200">Disclaimer.</strong> Swing Trade Radar is provided{" "}
           <em>as-is</em> for educational and research purposes only. Nothing here is investment,
           legal, or tax advice. Past performance does not guarantee future results. Trading
           securities involves risk of loss, including total loss of principal. You are solely

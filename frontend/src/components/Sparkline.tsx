@@ -14,7 +14,7 @@ export function Sparkline({
   positive,
 }: SparklineProps) {
   if (!values || values.length < 2) {
-    return <div className={`h-14 w-full rounded bg-white/5 ${className ?? ""}`} />;
+    return <div className={`h-14 w-full rounded bg-slate-800 ${className ?? ""}`} />;
   }
   const min = Math.min(...values);
   const max = Math.max(...values);
@@ -30,8 +30,9 @@ export function Sparkline({
   const last = values[values.length - 1];
   const first = values[0];
   const up = positive ?? last >= first;
-  const stroke = up ? "#10b981" : "#f43f5e";
-  const fill = up ? "rgba(16,185,129,0.12)" : "rgba(244,63,94,0.12)";
+  // Saturated emerald-400 / rose-400, NOT washed out
+  const stroke = up ? "#34d399" : "#fb7185";
+  const fill = up ? "rgba(52,211,153,0.18)" : "rgba(251,113,133,0.18)";
   const areaPath = `M 0,${height} L ${points.replace(/ /g, " L ")} L ${width},${height} Z`;
 
   return (
@@ -47,7 +48,7 @@ export function Sparkline({
         points={points}
         fill="none"
         stroke={stroke}
-        strokeWidth={1.5}
+        strokeWidth={1.75}
         strokeLinejoin="round"
         strokeLinecap="round"
       />

@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
+/* Single-theme dark fintech UI. Bloomberg terminal meets modern fintech.
+   Locked to dark regardless of system preference. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #020617;       /* slate-950 */
+  --foreground: #f1f5f9;       /* slate-100 */
+  --surface: #0f172a;           /* slate-900 */
+  --border: #334155;            /* slate-700 */
+  --muted: #94a3b8;             /* slate-400 */
 }
 
 @theme inline {
@@ -12,15 +17,13 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: dark;
+  background: var(--background);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
