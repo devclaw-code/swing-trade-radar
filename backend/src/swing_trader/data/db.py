@@ -87,6 +87,20 @@ class Meta(Base):
     value: Mapped[Any] = mapped_column(JSON)
 
 
+class VerdictRow(Base):
+    __tablename__ = "verdicts"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(10), index=True)
+    as_of: Mapped[date] = mapped_column(Date, index=True)
+    verdict: Mapped[str] = mapped_column(String(16), index=True)  # BUY|WATCH|AVOID|NO_SETUP
+    conviction: Mapped[float] = mapped_column(Float)
+    primary_setup: Mapped[str] = mapped_column(String(64), default="")
+    risk_tier: Mapped[str] = mapped_column(String(16), default="MEDIUM")
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)  # full Verdict dump (including why)
+    generated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    __table_args__ = (UniqueConstraint("ticker", "as_of"),)
+
+
 class Backtest(Base):
     __tablename__ = "backtests"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

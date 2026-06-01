@@ -10,8 +10,9 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from ..config import settings
 from ..data.db import Signal as SignalRow
-from ..data.db import session_scope
+from ..data.db import VerdictRow, session_scope
 from ..data.price_fetcher import load_ohlcv
+from ..schemas import Verdict
 from ..strategies.base_strategy import BaseStrategy, Signal
 from ..strategies.bollinger_squeeze import BollingerSqueezeStrategy
 from ..strategies.ma_crossover import MaCrossoverStrategy
@@ -19,8 +20,18 @@ from ..strategies.macd_trend import MacdTrendStrategy
 from ..strategies.rsi_mean_reversion import RsiMeanReversionStrategy
 from ..strategies.sr_breakout import SrBreakoutStrategy
 from ..strategies.volume_trend import VolumeTrendStrategy
+from ..strategies.v2.base import StrategyResult, V2Strategy
+from ..strategies.v2.s1_trend_50_200 import TrendFiftyTwoHundredStrategy
+from ..strategies.v2.s2_clenow_momentum import ClenowMomentumStrategy, compute_basket_scores
+from ..strategies.v2.s3_connors_rsi2 import ConnorsRsi2Strategy
+from ..strategies.v2.s4_minervini_vcp import MinerviniVcpStrategy
+from ..strategies.v2.s5_pead import PeadStrategy
+from .base_rate import compute_base_rate, format_base_rate
 from .indicators import enrich
+from .regime import compute_regime, offline_default
 from .risk_classifier import ClassifiedSignal, classify
+from .verdict import synthesize_verdict
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert_v2  # alias for clarity below
 
 log = logging.getLogger(__name__)
 
@@ -187,3 +198,283 @@ def latest_open_signals(
             )
         )
     return out
+
+
+# =============================================================================
+# V2 — verdict engine (Phase 2)
+# =============================================================================
+
+
+def default_v2_strategies() -> list[V2Strategy]:
+    return [
+        TrendFiftyTwoHundredStrategy(),
+        ClenowMomentumStrategy(),
+        ConnorsRsi2Strategy(),
+        MinerviniVcpStrategy(),
+        PeadStrategy(),
+    ]
+
+
+def _try_fetch_earnings(ticker: str) -> list:
+    """Best-effort earnings dates from yfinance. Returns [] on failure."""
+    try:
+        import yfinance as yf  # local import — keep optional
+
+        tk = yf.Ticker(ticker)
+        ed = tk.get_earnings_dates(limit=8) if hasattr(tk, "get_earnings_dates") else None
+        if ed is None or ed.empty:
+            return []
+        return [ts.date() for ts in ed.index.to_pydatetime()]
+    except Exception as e:  # noqa: BLE001
+        log.debug("earnings fetch failed for %s: %s", ticker, e)
+        return []
+
+
+def _build_basket(
+    *,
+    enriched_by_ticker: dict[str, "pd.DataFrame"],
+    vix: float | None,
+    earnings: dict[str, list],
+) -> dict:
+    from typing import Any
+
+    basket: dict[str, Any] = dict(enriched_by_ticker)
+    basket["clenow_scores"] = compute_basket_scores(enriched_by_ticker)
+    basket["vix"] = vix
+    basket["earnings_dates"] = earnings
+    return basket
+
+
+def _persist_verdicts(verdicts: list[Verdict]) -> int:
+    if not verdicts:
+        return 0
+    rows = [
+        dict(
+            ticker=v.ticker,
+            as_of=v.as_of,
+            verdict=v.verdict,
+            conviction=v.conviction,
+            primary_setup=v.primary_setup,
+            risk_tier=v.risk_tier,
+            payload=v.model_dump(mode="json"),
+            generated_at=datetime.now(UTC).replace(tzinfo=None),
+        )
+        for v in verdicts
+    ]
+    with session_scope() as s:
+        stmt = sqlite_insert_v2(VerdictRow).values(rows)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["ticker", "as_of"],
+            set_={
+                "verdict": stmt.excluded.verdict,
+                "conviction": stmt.excluded.conviction,
+                "primary_setup": stmt.excluded.primary_setup,
+                "risk_tier": stmt.excluded.risk_tier,
+                "payload": stmt.excluded.payload,
+                "generated_at": stmt.excluded.generated_at,
+            },
+        )
+        s.execute(stmt)
+    return len(rows)
+
+
+def generate_verdicts(
+    *,
+    use_offline_regime: bool = False,
+    persist: bool = True,
+) -> dict:
+    """Run all v2 strategies for the universe and synthesize per-ticker Verdicts.
+
+    Returns: {summary, verdicts: [Verdict.model_dump]}
+    """
+    import pandas as pd  # local — keep top-level imports lean
+
+    started = datetime.now(UTC).replace(tzinfo=None)
+    strategies = default_v2_strategies()
+
+    # 1. Load + enrich each ticker
+    enriched: dict[str, pd.DataFrame] = {}
+    for t in settings.tickers:
+        try:
+            df = load_ohlcv(t)
+            if df.empty:
+                continue
+            enriched[t] = enrich(df)
+        except Exception as e:  # noqa: BLE001
+            log.warning("enrich failed for %s: %s", t, e)
+
+    # 2. Regime
+    if use_offline_regime:
+        regime = offline_default()
+    else:
+        try:
+            regime = compute_regime()
+        except Exception as e:  # noqa: BLE001
+            log.warning("regime fetch failed, using offline default: %s", e)
+            regime = offline_default()
+
+    # 3. Earnings — fetched once per ticker (best-effort)
+    earnings_map = {t: _try_fetch_earnings(t) for t in enriched}
+
+    basket = _build_basket(
+        enriched_by_ticker=enriched,
+        vix=regime.vix,
+        earnings=earnings_map,
+    )
+
+    # 4. Per-ticker eval + synthesize
+    verdicts: list[Verdict] = []
+    errors = 0
+    for ticker, df in enriched.items():
+        try:
+            results: list[StrategyResult] = []
+            for strat in strategies:
+                try:
+                    results.append(strat.evaluate(df, ticker, basket))
+                except Exception as e:  # noqa: BLE001
+                    log.exception("strat %s failed on %s: %s", strat.name, ticker, e)
+                    errors += 1
+
+            as_of = (
+                df.index[-1].date()
+                if hasattr(df.index[-1], "date")
+                else datetime.now(UTC).date()
+            )
+
+            def _make_lookup(_df=df, _ticker=ticker):
+                def _lookup(primary: StrategyResult) -> str:
+                    setup_id = primary.strategy_name
+
+                    def _sig(d, i):
+                        # Recompute the same evaluation predicate on a slice of the df
+                        # using strategies' own evaluate (slow but correct).
+                        # To keep this fast we approximate: use score>0.6 as 'fired-like'.
+                        # NOTE: this is an approximation; full reproducibility requires
+                        # each strategy to expose a row-level predicate. TODO(devclaw).
+                        return False
+
+                    # Very lightweight signature: use a fast, vectorisable proxy per strategy.
+                    sig = _proxy_signature(setup_id)
+                    if sig is None:
+                        return ""
+                    stats = compute_base_rate(
+                        _ticker, setup_id, sig, _df,
+                        max_hold_days=primary.max_hold_days or 10,
+                    )
+                    return format_base_rate(stats, _ticker, setup_id)
+
+                return _lookup
+
+            verdict = synthesize_verdict(
+                ticker=ticker,
+                as_of=as_of,
+                strategy_results=results,
+                regime=regime,
+                base_rate_lookup=_make_lookup(),
+            )
+            verdicts.append(verdict)
+        except Exception as e:  # noqa: BLE001
+            log.exception("verdict synth failed for %s: %s", ticker, e)
+            errors += 1
+
+    n_persisted = _persist_verdicts(verdicts) if persist else 0
+    finished = datetime.now(UTC).replace(tzinfo=None)
+    return {
+        "started_at": started.isoformat(),
+        "finished_at": finished.isoformat(),
+        "n_verdicts": len(verdicts),
+        "n_persisted": n_persisted,
+        "errors": errors,
+        "verdicts": [v.model_dump(mode="json") for v in verdicts],
+        "regime": regime.model_dump(mode="json"),
+    }
+
+
+def _proxy_signature(setup_id: str):
+    """Return a fast row-level boolean predicate matching the spirit of the strategy.
+
+    These proxies power the historical base-rate computation. They do NOT exactly
+    reproduce the v2 strategy logic (which depends on basket data) — they capture
+    the per-ticker, per-bar core conditions.
+    """
+    import pandas_ta_classic as ta
+
+    if setup_id == "S1_trend_50_200":
+        def sig(df, i):
+            row = df.iloc[i]
+            return (
+                row["close"] > row["sma50"]
+                and row["sma50"] > row["sma200"]
+            )
+        return sig
+
+    if setup_id == "S3_connors_rsi2":
+        def sig(df, i):
+            # Compute RSI(2) for the slice ending at i
+            sub = df["close"].iloc[: i + 1]
+            rsi = ta.rsi(sub, length=2)
+            row = df.iloc[i]
+            if rsi is None or rsi.empty:
+                return False
+            return (
+                rsi.iloc[-1] < 10
+                and row["close"] > row["sma200"]
+            )
+        return sig
+
+    if setup_id == "S2_clenow_momentum":
+        def sig(df, i):
+            row = df.iloc[i]
+            sub = df["close"].iloc[: i + 1]
+            sma100 = sub.rolling(100).mean().iloc[-1]
+            return row["close"] > sma100
+        return sig
+
+    if setup_id == "S4_minervini_vcp":
+        def sig(df, i):
+            row = df.iloc[i]
+            if i < 50:
+                return False
+            prev_high = df["high"].iloc[max(0, i - 20) : i].max()
+            return row["close"] > prev_high and row["close"] > row["sma50"]
+        return sig
+
+    if setup_id == "S5_pead":
+        def sig(df, i):
+            if i < 1:
+                return False
+            prev = df.iloc[i - 1]
+            row = df.iloc[i]
+            gap = (row["open"] - prev["close"]) / max(prev["close"], 1e-6)
+            return gap > 0.03 and row["close"] > row["sma200"]
+        return sig
+
+    return None
+
+
+def latest_verdicts(
+    ticker: str | None = None,
+    verdict: str | None = None,
+) -> list[dict]:
+    """Return the most-recent verdict per ticker (or one ticker), as plain dicts."""
+    from sqlalchemy import func as sql_func
+
+    with session_scope() as s:
+        # Latest as_of per ticker
+        latest_q = (
+            select(VerdictRow.ticker, sql_func.max(VerdictRow.as_of).label("max_as_of"))
+            .group_by(VerdictRow.ticker)
+            .subquery()
+        )
+        q = select(VerdictRow).join(
+            latest_q,
+            (VerdictRow.ticker == latest_q.c.ticker)
+            & (VerdictRow.as_of == latest_q.c.max_as_of),
+        )
+        if ticker:
+            q = q.where(VerdictRow.ticker == ticker.upper())
+        if verdict:
+            q = q.where(VerdictRow.verdict == verdict.upper())
+        q = q.order_by(VerdictRow.conviction.desc())
+        rows = s.execute(q).scalars().all()
+    return [r.payload for r in rows]

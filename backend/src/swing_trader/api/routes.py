@@ -12,7 +12,13 @@ from ..data.db import Meta, Run, session_scope
 from ..data.news_scraper import latest_news
 from ..data.price_fetcher import load_ohlcv
 from ..engine.backtester import backtest_all, latest_results
-from ..engine.signal_generator import latest_open_signals
+from ..engine.regime import compute_regime, offline_default
+from ..engine.signal_generator import (
+    generate_verdicts,
+    latest_open_signals,
+    latest_verdicts,
+)
+from ..schemas import RegimeContext, Verdict
 
 router = APIRouter(prefix="/api", tags=["api"])
 
@@ -45,16 +51,76 @@ def strategies(
     strategy: str | None = None,
     direction: str | None = None,
 ) -> dict:
-    sigs = latest_open_signals(risk=risk, strategy=strategy, direction=direction)
-    return {"count": len(sigs), "signals": sigs}
+    """List of v2 strategies + their backtest stats placeholder.
+
+    Backwards-compat: if any of the legacy filter params are passed, fall back to
+    the legacy open-signals listing (used by the v1 frontend).
+    """
+    if any(v is not None for v in (risk, strategy, direction)):
+        sigs = latest_open_signals(risk=risk, strategy=strategy, direction=direction)
+        return {"count": len(sigs), "signals": sigs, "deprecated": True}
+
+    # v2: list strategy metadata
+    from ..strategies.v2.base import V2Strategy
+    from ..engine.signal_generator import default_v2_strategies
+
+    strats: list[V2Strategy] = default_v2_strategies()
+    info = []
+    for s in strats:
+        info.append(
+            {
+                "name": s.name,
+                "risk_tier": s.risk_tier,
+                "doc_refs": list(s.doc_refs),
+                "counter_argument_keys": list(s.counter_argument_keys),
+                # TODO(devclaw): wire walk-forward backtest stats per strategy.
+                "backtest": {"sharpe": None, "deflated_sharpe": None, "win_rate": None},
+            }
+        )
+    return {"count": len(info), "strategies": info}
 
 
-@router.get("/strategies/{ticker}")
+@router.get("/strategies/legacy/{ticker}", deprecated=True)
 def strategies_for_ticker(ticker: str) -> dict:
     sigs = latest_open_signals(ticker=ticker)
     if not sigs:
         raise HTTPException(404, detail=f"no open signals for {ticker.upper()}")
     return {"ticker": ticker.upper(), "count": len(sigs), "signals": sigs}
+
+
+# ---------------------------------------------------------------------------
+# v2 verdict routes
+# ---------------------------------------------------------------------------
+
+
+@router.get("/verdicts")
+def verdicts_all(verdict: str | None = None) -> dict:
+    """All tickers, today's verdicts (most recent per ticker)."""
+    items = latest_verdicts(verdict=verdict)
+    return {"count": len(items), "verdicts": items}
+
+
+@router.get("/verdicts/{ticker}", response_model=Verdict)
+def verdict_for_ticker(ticker: str) -> Verdict:
+    rows = latest_verdicts(ticker=ticker)
+    if not rows:
+        raise HTTPException(404, detail=f"no verdict for {ticker.upper()}")
+    return Verdict(**rows[0])
+
+
+@router.get("/regime", response_model=RegimeContext)
+def regime() -> RegimeContext:
+    try:
+        return compute_regime()
+    except Exception:  # noqa: BLE001
+        return offline_default()
+
+
+@router.post("/verdicts/run")
+def verdicts_run(bg: BackgroundTasks) -> dict:
+    """Trigger a fresh verdict computation in the background."""
+    bg.add_task(generate_verdicts)
+    return {"status": "started"}
 
 
 @router.get("/news")

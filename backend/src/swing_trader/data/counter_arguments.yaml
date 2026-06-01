@@ -1,0 +1,45 @@
+# Counter-arguments to surface in WhyBlock.counter_arguments.
+# Sourced from research/07-skeptical-perspective.md and research/02-risk-management.md.
+# Strategies emit `counter_argument_keys` to pull from this file.
+
+trend_late_entry: |
+  Golden-cross signals fire late off bear-market lows — entries can miss 25-30% of the rebound
+  (e.g. June 2009, March 2023). Late but rarely catastrophic. (research/01 §3, research/07 §9)
+
+trend_whipsaw: |
+  ~1 fake death-cross per decade (2011, 2015, 2018, 2022) — be ready to re-enter on the next
+  golden cross without ego damage. (research/01 §3)
+
+momentum_crash_risk: |
+  Cross-sectional momentum suffers periodic 'momentum crashes' (1932, 2009, 2020-Mar) when
+  prior losers rally violently. Concentration in mega-cap tech amplifies this. (research/03 §1, research/07 §6)
+
+concentration_risk_mag7: |
+  Mag7 are 50%+ of QQQ weight; correlated single-factor exposure. Picking the 'top quintile'
+  inside a basket of correlated names is closer to one bet than five. (research/05 §1, research/07 §11)
+
+rsi2_edge_decay: |
+  RSI(2)<10 had its strongest edge 2003-2010 and has degraded since 2015 as more retail
+  systems exploit it. Still alive when properly regime-filtered, but risk-adjusted edge is
+  shrinking. (research/07 §2, research/01 §8)
+
+falling_knife_risk: |
+  RSI(2) repeatedly fires inside a real downtrend (NFLX 2022, META 2022). The 200-SMA filter
+  helps but doesn't eliminate. Honor the stop. (research/01 §8 failure modes)
+
+vcp_failed_breakouts: |
+  ~30% of VCP breakouts fail. The pattern is discretionary; programmatic detection is a
+  heuristic. Treat S4 'fire' as an alert for human chart review, not auto-buy. (research/01 §15)
+
+discretionary_pattern: |
+  Minervini's VCP is judgment-heavy. Our scorer uses ATR-ratio + volume dry-up + breakout
+  proxies — they correlate with the visual pattern but won't always match. (PHASE2_PLAN §4.S4)
+
+pead_decay_in_largecap: |
+  PEAD has decayed in the largest, most-analyzed names since 2010. Edge persists in
+  surprise + guidance changes more than raw EPS beats; our gap-up proxy is a coarse filter.
+  (research/03 §5)
+
+earnings_event_risk: |
+  Holding through any subsequent earnings within the PEAD window re-introduces 5-15% gap risk.
+  Confirm there is no follow-on earnings inside max_hold. (research/02 §9)
