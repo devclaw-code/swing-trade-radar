@@ -4,6 +4,10 @@
 > User does NOT want auto-execution. User wants: each market day, for each NDX-100 mega-cap name, a clear
 > recommendation ("BUY this setup", "AVOID", "HOLD watchlist") with a full explanation of *why*.
 >
+> **No trading activity.** This system does not connect to brokers, does not place paper or live orders,
+> does not track a portfolio, and does not handle money in any form. It produces **read-only research
+> verdicts**. The user reads, decides, and acts (or not) entirely outside this system.
+>
 > **Driver:** This is the consolidated v2 scope, derived from `research/00-INDEX.md` and 8 underlying research docs.
 > **Status:** Plan. No code yet.
 

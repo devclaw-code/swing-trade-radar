@@ -1,22 +1,53 @@
 # Swing Trade Radar
 
-NASDAQ-100 big-tech swing trade signal engine + dashboard + backtesting.
+NASDAQ-100 mega-cap tech **swing-trade research desk** — daily signal suggestions with detailed reasoning.
 
-**Status:** Architecture phase. See [ARCHITECTURE.md](./ARCHITECTURE.md).
+**Status:** Phase 2 in progress. See [PHASE2_PLAN.md](./PHASE2_PLAN.md) and [research/00-INDEX.md](./research/00-INDEX.md).
 
-> ⚠️ Educational only. Not financial advice. Paper-trade everything.
+> ⚠️ **Educational only. Not financial advice.**
+> **This project does NOT execute trades.** It does not connect to any broker, place orders, or
+> manage real or paper money. It is a read-only research tool that publishes daily verdicts and
+> the reasoning behind them. Any decision to act on a suggestion is yours alone.
+
+## What it does
+
+Each trading day, after the US close, the engine scans the NDX-100 mega-cap basket and produces
+a **verdict per ticker**: `BUY`, `WATCH`, `AVOID`, or `NO_SETUP`. Every verdict comes with:
+
+- The primary setup that fired (e.g. "Connors RSI(2) Mean Reversion")
+- Suggested entry / stop / target / R:R / max hold (informational only — not orders)
+- Position-size *hint* for a hypothetical $25k account at 1% risk
+- A structured **why** block: weighted evidence, what would invalidate the setup, counter-arguments, doc references
+- A historical base rate: *"on this ticker, this exact setup has occurred N times over 10 years; win rate X%; avg R = Y"*
+- Current market regime context (SPY/QQQ above 200-SMA, VIX, term structure)
+
+The user reads, decides, and (if they want) places trades themselves elsewhere. The site never touches their money.
+
+## What it does NOT do
+
+- ❌ Connect to brokers, exchanges, or trading APIs
+- ❌ Place, modify, or cancel orders — paper or live
+- ❌ Track a real or simulated portfolio / PnL
+- ❌ Recommend leverage, options, or short selling (Phase 3+)
+- ❌ Provide intraday signals (EOD only, runs once per trading day)
+- ❌ Use ML/LLM-based predictions (Phase 3+, only after rule-based has 6mo track record)
 
 ## Stack
 
 - **Backend:** Python 3.12 + FastAPI + APScheduler + SQLite + yfinance + pandas-ta
-- **Frontend:** Next.js 16 + TypeScript + Tailwind v4 + Biome
-- **Indicators:** 6 swing strategies (MA cross, RSI mean reversion, Bollinger squeeze, MACD+trend, S/R breakout, volume trend)
-- **Risk classification:** 🟢 LOW / 🟡 MEDIUM / 🔴 HIGH per signal
-- **Backtesting:** walk-forward, R-multiple metrics
+- **Frontend:** Next.js 16 + TypeScript strict + Tailwind v4 + shadcn/ui + Biome
+- **Strategies (5 locked, from research shortlist):**
+  - S1 — 50/200 SMA + regime filter (trend)
+  - S2 — Clenow time-series momentum
+  - S3 — Connors RSI(2) mean reversion (regime-gated)
+  - S4 — Minervini VCP scorer (volatility contraction breakout)
+  - S5 — PEAD (post-earnings drift)
+- **Risk profile per verdict:** 🟢 LOW / 🟡 MEDIUM / 🔴 HIGH
+- **Backtesting:** walk-forward + deflated Sharpe (Bailey & Lopez de Prado) — strategies must clear DSR ≥ 1.0 before going live
+
+See [research/00-INDEX.md](./research/00-INDEX.md) for the underlying research dossier (~10,500 lines across 8 docs).
 
 ## Quick start
-
-_Coming in Phase 2._
 
 ```bash
 # backend
@@ -35,6 +66,12 @@ docker compose up --build
 ```
 
 The backend SQLite DB persists to `./backend/var/` on the host.
+
+## Disclaimer
+
+This is an educational research project. Verdicts are **suggestions for study**, not investment advice.
+The authors take no responsibility for trading decisions made on the basis of this tool's output.
+Past base rates do not predict future performance. **Do your own research.**
 
 ## License
 

@@ -1,8 +1,8 @@
 # Swing Trade Radar — Architecture
 
-**Status:** Phase 1 design. Not implemented yet.
-**Scope:** NASDAQ-100 big tech (20 tickers) swing trade signal engine + dashboard + backtesting.
-**Disclaimer:** Educational project. Not financial advice. All signals are paper-trade only until validated by user.
+**Status:** Phase 1 design (superseded by [PHASE2_PLAN.md](./PHASE2_PLAN.md) for v2). Not fully implemented yet.
+**Scope:** NASDAQ-100 big tech (20 tickers) swing-trade **signal advisor** + dashboard + backtesting. **Read-only — does not execute trades.**
+**Disclaimer:** Educational project. Not financial advice. **The system does NOT connect to brokers, place orders, or manage any real or simulated portfolio.** Verdicts are suggestions for study; any trading decision is the user's own.
 
 ---
 
