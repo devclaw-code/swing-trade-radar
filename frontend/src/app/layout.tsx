@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SiteFooter, SiteNav } from "@/components/SiteChrome";
+import { USE_MOCKS } from "@/lib/api";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -40,8 +41,13 @@ export default function RootLayout({
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`} data-theme="dark">
       <body className="flex min-h-full flex-col bg-slate-950 text-slate-100">
         <SiteNav />
+        {USE_MOCKS && (
+          <div className="border-b-2 border-rose-500 bg-rose-700 px-6 py-2 text-center text-xs font-bold uppercase tracking-wider text-white">
+            ⚠ MOCK DATA — Backend not connected. Prices, verdicts, and base rates are placeholder values, NOT real market data.
+          </div>
+        )}
         <div className="border-b border-amber-500/40 bg-amber-900/40 px-6 py-1.5 text-center text-[11px] font-medium text-amber-200">
-          Educational research desk — not financial advice. Paper-trade only.
+          Educational research desk — not financial advice. No trades are executed by this system.
         </div>
         <main className="flex-1">{children}</main>
         <SiteFooter />

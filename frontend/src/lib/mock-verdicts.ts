@@ -320,9 +320,9 @@ export const mockVerdicts: Verdict[] = [
     position_size_hint: null,
     regime_context: mockRegime,
     risk_tier: "LOW",
-    price: 174.6,
+    price: 375.4,
     day_change_pct: 0.002,
-    sparkline: spark(174, 0.02, 0.008, 53),
+    sparkline: spark(375, 0.02, 0.008, 53),
     why: {
       headline: "No strategy fires today. Trend is mildly up but no momentum/mean-rev/VCP/PEAD trigger.",
       evidence: [
