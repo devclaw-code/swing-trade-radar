@@ -7,11 +7,14 @@ from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert_v2  # alias for clarity below
 
 from ..config import settings
 from ..data.db import Signal as SignalRow
 from ..data.db import VerdictRow, session_scope
 from ..data.price_fetcher import load_ohlcv
+from ..data.sanity import check_data_sanity
+from ..schemas import SanityFlag as SanityFlagSchema
 from ..schemas import Verdict
 from ..strategies.base_strategy import BaseStrategy, Signal
 from ..strategies.bollinger_squeeze import BollingerSqueezeStrategy
@@ -19,19 +22,20 @@ from ..strategies.ma_crossover import MaCrossoverStrategy
 from ..strategies.macd_trend import MacdTrendStrategy
 from ..strategies.rsi_mean_reversion import RsiMeanReversionStrategy
 from ..strategies.sr_breakout import SrBreakoutStrategy
-from ..strategies.volume_trend import VolumeTrendStrategy
 from ..strategies.v2.base import StrategyResult, V2Strategy
 from ..strategies.v2.s1_trend_50_200 import TrendFiftyTwoHundredStrategy
 from ..strategies.v2.s2_clenow_momentum import ClenowMomentumStrategy, compute_basket_scores
 from ..strategies.v2.s3_connors_rsi2 import ConnorsRsi2Strategy
 from ..strategies.v2.s4_minervini_vcp import MinerviniVcpStrategy
 from ..strategies.v2.s5_pead import PeadStrategy
-from .base_rate import compute_base_rate, format_base_rate
+from ..strategies.volume_trend import VolumeTrendStrategy
+from .base_rate import compute_base_rate
 from .indicators import enrich
 from .regime import compute_regime, offline_default
 from .risk_classifier import ClassifiedSignal, classify
-from .verdict import synthesize_verdict
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert_v2  # alias for clarity below
+from .sample_size import apply_sample_size_adjustment
+from .scoring import apply_correlation_penalties
+from .verdict import attach_score_breakdown, synthesize_verdict
 
 log = logging.getLogger(__name__)
 
@@ -225,14 +229,14 @@ def _try_fetch_earnings(ticker: str) -> list:
         if ed is None or ed.empty:
             return []
         return [ts.date() for ts in ed.index.to_pydatetime()]
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         log.debug("earnings fetch failed for %s: %s", ticker, e)
         return []
 
 
 def _build_basket(
     *,
-    enriched_by_ticker: dict[str, "pd.DataFrame"],
+    enriched_by_ticker: dict[str, pd.DataFrame],
     vix: float | None,
     earnings: dict[str, list],
 ) -> dict:
@@ -292,15 +296,28 @@ def generate_verdicts(
     started = datetime.now(UTC).replace(tzinfo=None)
     strategies = default_v2_strategies()
 
-    # 1. Load + enrich each ticker
+    # 1. Load + enrich each ticker (universe + macro index ETFs for regime checks)
+    macro_tickers = ("SPY", "QQQ")
     enriched: dict[str, pd.DataFrame] = {}
-    for t in settings.tickers:
+    sanity_by_ticker: dict[str, list[SanityFlagSchema]] = {}
+    for t in list(settings.tickers) + list(macro_tickers):
         try:
             df = load_ohlcv(t)
             if df.empty:
                 continue
             enriched[t] = enrich(df)
-        except Exception as e:  # noqa: BLE001
+            if t not in macro_tickers:
+                raw_flags = check_data_sanity(enriched[t], ticker=t)
+                sanity_by_ticker[t] = [
+                    SanityFlagSchema(**f.to_dict()) for f in raw_flags
+                ]
+                if raw_flags:
+                    log.info(
+                        "sanity flags for %s: %s",
+                        t,
+                        [(f.code, f.severity) for f in raw_flags],
+                    )
+        except Exception as e:
             log.warning("enrich failed for %s: %s", t, e)
 
     # 2. Regime
@@ -309,12 +326,12 @@ def generate_verdicts(
     else:
         try:
             regime = compute_regime()
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             log.warning("regime fetch failed, using offline default: %s", e)
             regime = offline_default()
 
-    # 3. Earnings — fetched once per ticker (best-effort)
-    earnings_map = {t: _try_fetch_earnings(t) for t in enriched}
+    # 3. Earnings — fetched once per ticker (best-effort, skip macro ETFs)
+    earnings_map = {t: _try_fetch_earnings(t) for t in enriched if t not in macro_tickers}
 
     basket = _build_basket(
         enriched_by_ticker=enriched,
@@ -322,16 +339,18 @@ def generate_verdicts(
         earnings=earnings_map,
     )
 
-    # 4. Per-ticker eval + synthesize
+    # 4. Per-ticker eval + synthesize (macro ETFs are basket context, not verdicts)
     verdicts: list[Verdict] = []
     errors = 0
     for ticker, df in enriched.items():
+        if ticker in macro_tickers:
+            continue
         try:
             results: list[StrategyResult] = []
             for strat in strategies:
                 try:
                     results.append(strat.evaluate(df, ticker, basket))
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:
                     log.exception("strat %s failed on %s: %s", strat.name, ticker, e)
                     errors += 1
 
@@ -342,26 +361,24 @@ def generate_verdicts(
             )
 
             def _make_lookup(_df=df, _ticker=ticker):
-                def _lookup(primary: StrategyResult) -> str:
+                def _lookup(primary: StrategyResult):
                     setup_id = primary.strategy_name
-
-                    def _sig(d, i):
-                        # Recompute the same evaluation predicate on a slice of the df
-                        # using strategies' own evaluate (slow but correct).
-                        # To keep this fast we approximate: use score>0.6 as 'fired-like'.
-                        # NOTE: this is an approximation; full reproducibility requires
-                        # each strategy to expose a row-level predicate. TODO(devclaw).
-                        return False
-
-                    # Very lightweight signature: use a fast, vectorisable proxy per strategy.
                     sig = _proxy_signature(setup_id)
                     if sig is None:
-                        return ""
+                        return None
                     stats = compute_base_rate(
                         _ticker, setup_id, sig, _df,
                         max_hold_days=primary.max_hold_days or 10,
                     )
-                    return format_base_rate(stats, _ticker, setup_id)
+                    if not stats or stats.get("occurrences", 0) == 0:
+                        return None
+                    from ..schemas import BaseRateBlock
+                    return BaseRateBlock(
+                        occurrences=int(stats["occurrences"]),
+                        win_rate=float(stats["win_rate"]),
+                        avg_r=float(stats["avg_r"]),
+                        median_hold=float(stats["median_hold"]),
+                    )
 
                 return _lookup
 
@@ -372,10 +389,92 @@ def generate_verdicts(
                 regime=regime,
                 base_rate_lookup=_make_lookup(),
             )
+
+            # ---- Score breakdown -------------------------------------------------
+            # Pick the same `primary` the synthesizer used so scoring lines up.
+            fired = [r for r in results if r.fired]
+            fired.sort(key=lambda r: r.score, reverse=True)
+            if fired:
+                primary_for_score = fired[0]
+            elif results:
+                primary_for_score = max(results, key=lambda r: r.score)
+            else:
+                primary_for_score = None
+
+            base_rate_for_score = None
+            if primary_for_score is not None:
+                # Reuse the base rate already attached by synthesize_verdict when
+                # the scoring primary matches the verdict's primary setup.
+                attached = getattr(verdict.why, "historical_base_rate", None)
+                if attached is not None and verdict.primary_setup == primary_for_score.strategy_name:
+                    base_rate_for_score = attached
+                else:
+                    try:
+                        base_rate_for_score = _make_lookup()(primary_for_score)
+                    except Exception as e:
+                        log.debug("base_rate (for scoring) failed for %s: %s", ticker, e)
+
+            dte: int | None = None
+            today_dt = as_of
+            edates = earnings_map.get(ticker) or []
+            future_edates = [d for d in edates if d >= today_dt]
+            if future_edates:
+                dte = (min(future_edates) - today_dt).days
+
+            attach_score_breakdown(
+                verdict,
+                df=df,
+                primary=primary_for_score,
+                sanity_flags=sanity_by_ticker.get(ticker, []),
+                base_rate=base_rate_for_score,
+                days_to_earnings=dte,
+            )
+
+            # Latest-bar enrichment for UI header.
+            try:
+                closes = df["close"].dropna()
+                if len(closes) >= 1:
+                    last_close = float(closes.iloc[-1])
+                    verdict.price = round(last_close, 4)
+                    if len(closes) >= 2:
+                        prev = float(closes.iloc[-2])
+                        if prev > 0:
+                            verdict.day_change_pct = round((last_close - prev) / prev, 6)
+                    tail = closes.tail(60).tolist()
+                    verdict.sparkline = [float(round(x, 4)) for x in tail]
+            except Exception as e:
+                log.warning("sparkline/price enrich failed for %s: %s", ticker, e)
+
+            # Attach sanity flags collected during enrich step.
+            verdict.sanity_flags = sanity_by_ticker.get(ticker, [])
+
             verdicts.append(verdict)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             log.exception("verdict synth failed for %s: %s", ticker, e)
             errors += 1
+
+    # ---- Correlation post-pass --------------------------------------------
+    # Sort by score descending so higher-scoring trades get priority and
+    # downgrade their lower-scoring correlated peers.
+    scored = [v for v in verdicts if v.score is not None]
+    scored.sort(key=lambda v: v.score or 0.0, reverse=True)
+    try:
+        apply_correlation_penalties(
+            verdicts_in_order=scored,
+            enriched_by_ticker={t: d for t, d in enriched.items() if t not in macro_tickers},
+        )
+    except Exception as e:
+        log.warning("correlation post-pass failed: %s", e)
+
+    # ---- Sample-size reliability post-pass --------------------------------
+    # Run AFTER scoring + correlation so `confidence_adjusted_for_sample`
+    # reflects the *final* score, not an intermediate one. This is also
+    # idempotent (see engine.sample_size).
+    for v in verdicts:
+        try:
+            apply_sample_size_adjustment(v)
+        except Exception as e:
+            log.warning("sample-size post-pass failed for %s: %s", v.ticker, e)
 
     n_persisted = _persist_verdicts(verdicts) if persist else 0
     finished = datetime.now(UTC).replace(tzinfo=None)

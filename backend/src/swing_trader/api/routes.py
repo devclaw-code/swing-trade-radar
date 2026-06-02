@@ -12,6 +12,7 @@ from ..data.db import Meta, Run, session_scope
 from ..data.news_scraper import latest_news
 from ..data.price_fetcher import load_ohlcv
 from ..engine.backtester import backtest_all, latest_results
+from ..engine.conservative import apply_conservative_filter
 from ..engine.regime import compute_regime, offline_default
 from ..engine.signal_generator import (
     generate_verdicts,
@@ -61,20 +62,47 @@ def strategies(
         return {"count": len(sigs), "signals": sigs, "deprecated": True}
 
     # v2: list strategy metadata
-    from ..strategies.v2.base import V2Strategy
     from ..engine.signal_generator import default_v2_strategies
+    from ..strategies.v2.base import V2Strategy
+
+    descriptions: dict[str, str] = {
+        "S1_trend_50_200": (
+            "Classic trend-following: long when price is above the 50-day SMA and the 50-day "
+            "is above the 200-day (golden cross intact). Enters on next-day open, ATR-based stop and target."
+        ),
+        "S2_clenow_momentum": (
+            "Andreas Clenow style momentum: rank the basket by 90-day exponential-regression slope "
+            "x R-squared; only top-decile names with low volatility and trend filter qualify."
+        ),
+        "S3_connors_rsi2": (
+            "Larry Connors mean-reversion: 2-period RSI < 10 while price is above its 200-SMA, in a "
+            "healthy VIX regime, with no earnings inside the hold window."
+        ),
+        "S4_minervini_vcp": (
+            "Mark Minervini's VCP / Stage 2 trend template: tightening price contractions on "
+            "declining volume, breakout above pivot with relative strength vs. the index."
+        ),
+        "S5_pead": (
+            "Post-earnings announcement drift: ride the multi-week drift after a positive earnings "
+            "surprise; gated by gap, volume, and surprise magnitude thresholds."
+        ),
+    }
 
     strats: list[V2Strategy] = default_v2_strategies()
     info = []
     for s in strats:
+        # Derive a short id like "S1" from "S1_trend_50_200"
+        short_id = s.name.split("_", 1)[0] if "_" in s.name else s.name
         info.append(
             {
+                "id": short_id,
                 "name": s.name,
+                "description": descriptions.get(s.name, ""),
                 "risk_tier": s.risk_tier,
                 "doc_refs": list(s.doc_refs),
                 "counter_argument_keys": list(s.counter_argument_keys),
                 # TODO(devclaw): wire walk-forward backtest stats per strategy.
-                "backtest": {"sharpe": None, "deflated_sharpe": None, "win_rate": None},
+                "backtest": None,
             }
         )
     return {"count": len(info), "strategies": info}
@@ -94,10 +122,31 @@ def strategies_for_ticker(ticker: str) -> dict:
 
 
 @router.get("/verdicts")
-def verdicts_all(verdict: str | None = None) -> dict:
-    """All tickers, today's verdicts (most recent per ticker)."""
+def verdicts_all(
+    verdict: str | None = None,
+    mode: str = "all",
+) -> dict:
+    """All tickers, today's verdicts (most recent per ticker).
+
+    ``mode=all`` (default): legacy shape ``{count, verdicts}``.
+    ``mode=conservative``: also includes ``passed``, ``marginal``, ``filtered_out``
+    arrays from :func:`apply_conservative_filter`. ``verdicts`` is preserved
+    for backward compat and contains the *unfiltered* list.
+    """
     items = latest_verdicts(verdict=verdict)
-    return {"count": len(items), "verdicts": items}
+    if mode != "conservative":
+        return {"count": len(items), "verdicts": items}
+
+    parsed = [Verdict(**row) for row in items]
+    result = apply_conservative_filter(parsed, mode="conservative")
+    return {
+        "count": len(items),
+        "verdicts": items,  # backward-compat: full list
+        "mode": result.mode,
+        "passed": [v.model_dump(mode="json") for v in result.passed],
+        "marginal": [m.model_dump(mode="json") for m in result.marginal],
+        "filtered_out": [f.model_dump(mode="json") for f in result.filtered_out],
+    }
 
 
 @router.get("/verdicts/{ticker}", response_model=Verdict)
@@ -112,7 +161,7 @@ def verdict_for_ticker(ticker: str) -> Verdict:
 def regime() -> RegimeContext:
     try:
         return compute_regime()
-    except Exception:  # noqa: BLE001
+    except Exception:
         return offline_default()
 
 

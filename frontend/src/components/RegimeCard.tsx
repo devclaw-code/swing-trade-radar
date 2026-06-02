@@ -52,7 +52,7 @@ export function RegimeCard({ regime, asOf }: { regime: RegimeContext; asOf?: str
   return (
     <section
       aria-label="Market regime"
-      className={`rounded-xl border-2 p-5 shadow-lg ${toneStyles[t]}`}
+      className={`rounded-xl border-2 p-3 shadow-lg sm:p-5 ${toneStyles[t]}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>

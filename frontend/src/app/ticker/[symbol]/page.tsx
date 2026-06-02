@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { RegimeCard } from "@/components/RegimeCard";
+import { SanityBanner } from "@/components/SanityBanner";
+import { ScoreBreakdownCard } from "@/components/ScoreBreakdownCard";
 import { VerdictCard } from "@/components/VerdictCard";
 import { getStrategies, getVerdict, type Verdict } from "@/lib/api";
 
@@ -31,9 +33,9 @@ export default async function TickerPage({ params }: { params: Promise<{ symbol:
 
   return (
     <>
-      <header className="border-b border-slate-700/60 bg-slate-900 px-6 py-5">
+      <header className="border-b border-slate-700/60 bg-slate-900 px-4 py-4 sm:px-6 sm:py-5">
         <div className="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-3">
-          <div className="flex items-end gap-4">
+          <div className="flex flex-wrap items-end gap-3 sm:gap-4">
             <Link
               href="/"
               className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-xs font-medium text-slate-200 transition hover:border-slate-600 hover:bg-slate-700 hover:text-slate-50"
@@ -41,12 +43,12 @@ export default async function TickerPage({ params }: { params: Promise<{ symbol:
               ← Back
             </Link>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-slate-50">{verdict.ticker}</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-50 sm:text-3xl">{verdict.ticker}</h1>
               <p className="text-xs text-slate-400">As of {verdict.as_of}</p>
             </div>
             {typeof verdict.price === "number" && (
-              <div className="ml-4 flex items-baseline gap-2">
-                <span className="font-mono text-2xl font-semibold text-slate-50">${fmt(verdict.price)}</span>
+              <div className="flex items-baseline gap-2 sm:ml-4">
+                <span className="font-mono text-xl font-semibold text-slate-50 sm:text-2xl">${fmt(verdict.price)}</span>
                 {typeof verdict.day_change_pct === "number" && (
                   <span
                     className={`font-mono text-sm font-semibold ${
@@ -63,10 +65,18 @@ export default async function TickerPage({ params }: { params: Promise<{ symbol:
         </div>
       </header>
 
-      <section className="mx-auto max-w-6xl space-y-6 px-6 py-6">
+      <section className="mx-auto max-w-6xl space-y-6 px-3 py-4 sm:px-6 sm:py-6">
+        <SanityBanner flags={verdict.sanity_flags} />
         <RegimeCard regime={verdict.regime_context} asOf={verdict.as_of} />
 
         <VerdictCard v={verdict} defaultExpanded />
+
+        {verdict.score_breakdown && (
+          <ScoreBreakdownCard
+            breakdown={verdict.score_breakdown}
+            correlationPenalty={verdict.correlation_penalty ?? 0}
+          />
+        )}
 
         {/* Strategy evaluation table */}
         {strategies && (

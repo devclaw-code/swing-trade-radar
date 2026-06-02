@@ -14,6 +14,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#020617",
+};
+
 export const metadata: Metadata = {
   title: {
     default: "Swing Trade Radar",
@@ -46,7 +52,7 @@ export default function RootLayout({
             ⚠ MOCK DATA — Backend not connected. Prices, verdicts, and base rates are placeholder values, NOT real market data.
           </div>
         )}
-        <div className="border-b border-amber-500/40 bg-amber-900/40 px-6 py-1.5 text-center text-[11px] font-medium text-amber-200">
+        <div className="border-b border-amber-500/40 bg-amber-900/40 px-3 py-1.5 text-center text-[11px] font-medium text-amber-200 sm:px-6">
           Educational research desk — not financial advice. No trades are executed by this system.
         </div>
         <main className="flex-1">{children}</main>

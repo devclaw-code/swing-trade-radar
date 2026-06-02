@@ -7,6 +7,8 @@ services:
     restart: unless-stopped
     environment:
       PYTHONUNBUFFERED: "1"
+      DATABASE_URL: "sqlite:////app/var/swing.db"
+      DATA_DIR: "/app/var"
     ports:
       - "8000:8000"
     volumes:

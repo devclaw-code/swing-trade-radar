@@ -63,6 +63,15 @@ export interface WhyBlock {
   doc_refs: string[];
 }
 
+export type Reliability = "high" | "medium" | "low" | "insufficient";
+
+export interface HistoricalStatsDisplay {
+  tier: Reliability;
+  sample_size: number;
+  show_win_rate: boolean;
+  display_text: string;
+}
+
 export interface Verdict {
   ticker: string;
   as_of: string;
@@ -82,6 +91,43 @@ export interface Verdict {
   price?: number;
   day_change_pct?: number;
   sparkline?: number[];
+  sanity_flags?: SanityFlag[];
+  score?: number | null;
+  score_breakdown?: ScoreBreakdown | null;
+  correlation_penalty?: number;
+  reliability?: Reliability;
+  confidence_adjusted_for_sample?: number | null;
+  historical_stats_display?: HistoricalStatsDisplay | null;
+}
+
+export interface ScoreComponent {
+  value: number;
+  weight: number;
+  note: string;
+}
+
+export interface ScoreBreakdown {
+  trend_quality: ScoreComponent;
+  momentum: ScoreComponent;
+  mean_reversion: ScoreComponent;
+  risk_reward: ScoreComponent;
+  volatility: ScoreComponent;
+  earnings_risk: ScoreComponent;
+  historical_reliability: ScoreComponent;
+  extension_risk: ScoreComponent;
+  total: number;
+  weights: Record<string, number>;
+  correlation_penalty: number;
+}
+
+export type SanitySeverity = "info" | "warning" | "high";
+
+export interface SanityFlag {
+  code: string;
+  severity: SanitySeverity;
+  message: string;
+  value?: number | null;
+  threshold?: number | null;
 }
 
 export interface StrategySummary {
@@ -218,6 +264,28 @@ export interface VerdictsResponse {
   count: number;
   as_of: string;
   verdicts: Verdict[];
+  // Present when the request was made with `?mode=conservative`.
+  mode?: "all" | "conservative";
+  passed?: Verdict[];
+  marginal?: MarginalVerdict[];
+  filtered_out?: FilteredVerdict[];
+}
+
+export type FilterMode = "all" | "conservative";
+
+export interface FilterReason {
+  code: string;
+  message: string;
+}
+
+export interface FilteredVerdict {
+  verdict: Verdict;
+  reasons: FilterReason[];
+}
+
+export interface MarginalVerdict {
+  verdict: Verdict;
+  reasons: FilterReason[];
 }
 
 export interface RegimeResponse extends RegimeContext {
@@ -243,9 +311,10 @@ async function withMockFallback<T>(path: string, mock: () => T): Promise<T> {
   }
 }
 
-export async function getVerdicts(): Promise<VerdictsResponse> {
+export async function getVerdicts(mode: FilterMode = "all"): Promise<VerdictsResponse> {
   const { mockVerdicts, mockAsOf } = await import("./mock-verdicts");
-  return withMockFallback("/api/verdicts", () => ({
+  const path = mode === "conservative" ? "/api/verdicts?mode=conservative" : "/api/verdicts";
+  return withMockFallback(path, () => ({
     count: mockVerdicts.length,
     as_of: mockAsOf,
     verdicts: mockVerdicts,
