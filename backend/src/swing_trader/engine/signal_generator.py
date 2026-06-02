@@ -403,10 +403,16 @@ def generate_verdicts(
 
             base_rate_for_score = None
             if primary_for_score is not None:
-                try:
-                    base_rate_for_score = _make_lookup()(primary_for_score)
-                except Exception as e:
-                    log.debug("base_rate (for scoring) failed for %s: %s", ticker, e)
+                # Reuse the base rate already attached by synthesize_verdict when
+                # the scoring primary matches the verdict's primary setup.
+                attached = getattr(verdict.why, "historical_base_rate", None)
+                if attached is not None and verdict.primary_setup == primary_for_score.strategy_name:
+                    base_rate_for_score = attached
+                else:
+                    try:
+                        base_rate_for_score = _make_lookup()(primary_for_score)
+                    except Exception as e:
+                        log.debug("base_rate (for scoring) failed for %s: %s", ticker, e)
 
             dte: int | None = None
             today_dt = as_of

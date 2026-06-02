@@ -509,6 +509,9 @@ def apply_correlation_penalties(
             v.score_breakdown.correlation_penalty = v.correlation_penalty
             new_total = max(0.0, (v.score or 0.0) - penalty)
             v.score = round(new_total, 2)
+            # Keep score_breakdown.total in sync with the headline score so
+            # the frontend's ScoreBreakdownCard total matches ScoreBadge.
+            v.score_breakdown.total = v.score
             # Append a tiny note onto extension_risk note? No — keep components
             # untouched; correlation is its own field. The frontend renders it
             # alongside the total.

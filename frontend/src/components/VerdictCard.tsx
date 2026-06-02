@@ -119,7 +119,7 @@ function ScoreBadge({
     `Score ${score.toFixed(0)}/100\n` +
     `Top:  ${top.map((t) => `${t.label} ${t.value.toFixed(0)}`).join(", ")}\n` +
     `Drag: ${bottom.map((t) => `${t.label} ${t.value.toFixed(0)}`).join(", ")}` +
-    (correlationPenalty > 0 ? `\nCorrelation penalty: −1${correlationPenalty.toFixed(0)}` : "");
+    (correlationPenalty > 0 ? `\nCorrelation penalty: −${correlationPenalty.toFixed(0)}` : "");
 
   const tone =
     score >= 70
