@@ -119,7 +119,8 @@ def fetch_alpha_vantage(
     c = client or httpx.Client(timeout=15.0)
     out: list[EarningsEvent] = []
     universe = {t.upper() for t in tickers}
-    horizon = "3month" if horizon_days > 30 else "3month"  # AV only supports 3mo/6mo/12mo windows
+    # AV only supports 3mo/6mo/12mo windows; our horizon always fits in 3 months.
+    horizon = "3month"
     try:
         r = c.get(
             "https://www.alphavantage.co/query",

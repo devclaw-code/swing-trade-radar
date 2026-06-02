@@ -57,7 +57,8 @@ class Settings(BaseSettings):
     calendar_refresh_minute_utc: int = 0
     macro_blackout_hours: int = 48     # no new longs in N hours before CPI/FOMC/NFP
     earnings_exit_hours: int = 24      # exit 24h before earnings during a hold
-    fomc_ics_url: str = "https://www.federalreserve.gov/json/calendar.json"
+    # Federal Reserve calendar JSON feed (not an .ics feed despite FOMC naming).
+    fomc_calendar_url: str = "https://www.federalreserve.gov/json/calendar.json"
     fred_base_url: str = "https://api.stlouisfed.org/fred"
     finnhub_base_url: str = "https://finnhub.io/api/v1"
 

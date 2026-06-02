@@ -8,7 +8,8 @@ Rules (encode pillar 3 of the AI-Infra Strategist prompt):
 
 1. **Macro long-side blackout**
    No new LONG entries in the ``settings.macro_blackout_hours`` window
-   (default 48h) before any of: CPI, CORE_PCE, NFP, PPI, FOMC.
+   (default 48h) before any of: CPI, CORE_PCE, NFP, PPI, FOMC, RETAIL_SALES,
+   ISM_MFG.
    Shorts unaffected (we don't trade shorts but the API is symmetric for
    future use).
 
@@ -34,7 +35,7 @@ from ..data.db import Event, session_scope
 
 Side = Literal["LONG", "SHORT"]
 
-_MACRO_LONG_RELEASES = {"CPI", "CORE_PCE", "NFP", "PPI", "FOMC", "RETAIL_SALES"}
+_MACRO_LONG_RELEASES = {"CPI", "CORE_PCE", "NFP", "PPI", "FOMC", "RETAIL_SALES", "ISM_MFG"}
 
 
 @dataclass(frozen=True)
@@ -63,23 +64,29 @@ def is_blackout(
     """
     if not settings.calendars_enabled:
         return None
-    now = (now or datetime.now(UTC)).astimezone(UTC)
-    horizon = now + timedelta(hours=settings.macro_blackout_hours)
+    # Keep an aware `now` for display/hours_until math, but compare against
+    # naive-UTC bounds in the query: `scheduled_at` is stored as naive UTC
+    # (see `_naive_utc()` in calendar_refresh.py) and SQLite mishandles
+    # aware-vs-naive datetime comparisons.
+    now_aware = (now or datetime.now(UTC)).astimezone(UTC)
+    now_naive = now_aware.replace(tzinfo=None)
+    horizon_naive = now_naive + timedelta(hours=settings.macro_blackout_hours)
     sym = ticker.upper()
 
     try:
         with session_scope() as s:
-            # Earnings: any side
+            # Earnings: any side. Only confirmed prints gate entries.
             ev = s.scalar(
                 select(Event)
                 .where(Event.kind == "earnings")
                 .where(Event.symbol == sym)
-                .where(Event.scheduled_at > now)
-                .where(Event.scheduled_at <= horizon)
+                .where(Event.confirmed.is_(True))
+                .where(Event.scheduled_at > now_naive)
+                .where(Event.scheduled_at <= horizon_naive)
                 .order_by(Event.scheduled_at.asc())
             )
             if ev:
-                return _to_reason(ev, now)
+                return _to_reason(ev, now_aware)
 
             # Macro: only suppress LONG entries
             if side == "LONG":
@@ -87,12 +94,12 @@ def is_blackout(
                     select(Event)
                     .where(Event.kind == "macro")
                     .where(Event.release.in_(_MACRO_LONG_RELEASES))
-                    .where(Event.scheduled_at > now)
-                    .where(Event.scheduled_at <= horizon)
+                    .where(Event.scheduled_at > now_naive)
+                    .where(Event.scheduled_at <= horizon_naive)
                     .order_by(Event.scheduled_at.asc())
                 )
                 if ev:
-                    return _to_reason(ev, now)
+                    return _to_reason(ev, now_aware)
     except Exception:
         # Fail open. The synthesizer can decide to surface a warning.
         return None
@@ -102,7 +109,7 @@ def is_blackout(
 
 def next_earnings_for(ticker: str, *, now: datetime | None = None) -> datetime | None:
     """Return the next confirmed earnings datetime (UTC) for ``ticker``, or None."""
-    now = (now or datetime.now(UTC)).astimezone(UTC)
+    now_naive = (now or datetime.now(UTC)).astimezone(UTC).replace(tzinfo=None)
     sym = ticker.upper()
     try:
         with session_scope() as s:
@@ -110,7 +117,8 @@ def next_earnings_for(ticker: str, *, now: datetime | None = None) -> datetime |
                 select(Event)
                 .where(Event.kind == "earnings")
                 .where(Event.symbol == sym)
-                .where(Event.scheduled_at > now)
+                .where(Event.confirmed.is_(True))
+                .where(Event.scheduled_at > now_naive)
                 .order_by(Event.scheduled_at.asc())
             )
             return ev.scheduled_at.replace(tzinfo=UTC) if ev else None

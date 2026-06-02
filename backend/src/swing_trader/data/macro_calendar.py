@@ -10,7 +10,7 @@ Design notes:
   helper will treat missing data as "no blackout" and the run-summary will
   surface a stale-calendar banner upstream.
 - FRED returns scheduled dates without intraday timestamps; standard print times
-  are 08:30 ET (BLS) / 10:00 ET (FOMC presser). We attach the canonical print
+  are 08:30 ET (BLS) / 14:00 ET (FOMC statement). We attach the canonical print
   time in UTC per release_id.
 """
 
@@ -145,7 +145,7 @@ def fetch_fomc_meetings(horizon_days: int = 90, *, client: httpx.Client | None =
     c = client or httpx.Client(timeout=10.0)
     try:
         try:
-            r = c.get(settings.fomc_ics_url)
+            r = c.get(settings.fomc_calendar_url)
             r.raise_for_status()
             payload = r.json()
             # Schema is loose; look for any object with 'date' or 'startdate'.

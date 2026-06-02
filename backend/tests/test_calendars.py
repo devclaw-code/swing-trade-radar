@@ -7,10 +7,8 @@ the database upsert + blackout helpers end-to-end against a temp SQLite file.
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 
 import pytest
-from sqlalchemy import select
 
 
 @pytest.fixture
@@ -19,9 +17,8 @@ def tmp_db(tmp_path, monkeypatch):
     db_path = tmp_path / "test_swing.db"
     db_url = f"sqlite:///{db_path}"
 
-    # Re-import the modules with a fresh engine bound to tmp_path.
-    import importlib
-
+    # Rebind settings + the db module's engine/sessionmaker to an isolated
+    # SQLite file for this test (no module reload needed).
     from swing_trader import config as cfg_mod
     from swing_trader.data import db as db_mod
 
@@ -43,8 +40,8 @@ def tmp_db(tmp_path, monkeypatch):
 
 def test_macro_calendar_upserts_and_blackouts(tmp_db, monkeypatch):
     from swing_trader.data import calendar_refresh
-    from swing_trader.data.macro_calendar import MacroEvent
     from swing_trader.data.earnings_calendar import EarningsEvent
+    from swing_trader.data.macro_calendar import MacroEvent
     from swing_trader.engine import blackout
 
     now = datetime(2026, 6, 2, 12, 0, tzinfo=UTC)
