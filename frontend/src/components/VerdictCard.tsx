@@ -67,6 +67,38 @@ function ReliabilityBadge({
 function fmt(n: number, d = 2) {
   return n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
 }
+
+// Strip internal dev notes (TODOs, developer names, "unavailable" wiring stubs)
+// from any evidence note before it reaches a user. Never surface internal
+// engineering chatter in the UI.
+function sanitizeNote(note: string | null | undefined): string {
+  if (!note) return "";
+  if (/TODO|devclaw|wire yfinance|calendar unavailable|gate skipped/i.test(note)) {
+    return "Earnings check unavailable — verify manually before entry.";
+  }
+  return note;
+}
+
+const CONVICTION_TOOLTIP =
+  "Conviction score: percentage of strategy sub-conditions that fired. 100% = all checks passed. Lower scores indicate partial or conflicting signals.";
+
+// S3 (Connors RSI-2) currently backtests with a negative Sharpe; flag it on
+// any card where it is the primary setup.
+function isS3Primary(setup: string | null | undefined): boolean {
+  if (!setup) return false;
+  return /\bS3\b|connors|rsi.?2/i.test(setup);
+}
+
+// Warn whenever a base-rate stat is computed from a tiny sample (n < 10).
+function SmallSampleWarning({ n }: { n: number }) {
+  if (n >= 10) return null;
+  return (
+    <p className="mt-1.5 text-xs font-medium text-amber-300">
+      ⚠ Small sample (n={n}) — treat as illustrative only.
+    </p>
+  );
+}
+
 function pct(n: number, d = 2) {
   return `${n >= 0 ? "+" : ""}${(n * 100).toFixed(d)}%`;
 }
@@ -87,6 +119,14 @@ function ConvictionBar({ value }: { value: number }) {
         <div className={`h-full ${tone}`} style={{ width: `${v * 100}%` }} />
       </div>
       <span className="font-mono text-xs font-semibold text-slate-300">{pctVal}%</span>
+      <button
+        type="button"
+        aria-label="Conviction score explanation"
+        title={CONVICTION_TOOLTIP}
+        className="inline-flex h-4 w-4 cursor-help select-none items-center justify-center rounded-full border border-slate-600 text-[10px] font-bold text-slate-400 hover:border-sky-400 hover:text-sky-300 focus:border-sky-400 focus:text-sky-300 focus:outline-none"
+      >
+        ℹ
+      </button>
     </div>
   );
 }
@@ -190,7 +230,7 @@ function EvidenceRow({ e }: { e: EvidenceItem }) {
           style={{ width: `${widthPct}%` }}
         />
       </div>
-      <div className="pl-6 text-xs text-slate-400 sm:pl-0">{e.note}</div>
+      <div className="pl-6 text-xs text-slate-400 sm:pl-0">{sanitizeNote(e.note)}</div>
     </li>
   );
 }
@@ -314,6 +354,13 @@ export function VerdictCard({
           </div>
           <ConvictionBar value={v.conviction} />
         </div>
+
+        {isS3Primary(v.primary_setup) && (
+          <p className="rounded-md border border-amber-500/40 bg-amber-950/40 px-2.5 py-1.5 text-xs text-amber-200">
+            <span className="font-semibold">Note:</span> S3 backtest Sharpe is currently negative —
+            size conservatively.
+          </p>
+        )}
 
         {typeof v.score === "number" && v.score_breakdown && (
           <ScoreBadge
@@ -489,6 +536,10 @@ export function VerdictCard({
                   . Median hold {v.why.historical_base_rate.median_hold} days.
                 </p>
               )}
+              {v.historical_stats_display?.tier !== "insufficient" &&
+                v.historical_stats_display?.tier !== "low" && (
+                  <SmallSampleWarning n={v.why.historical_base_rate.occurrences} />
+                )}
             </Section>
           )}
           {!v.why.historical_base_rate && v.historical_stats_display?.tier === "insufficient" && (
@@ -510,15 +561,12 @@ export function VerdictCard({
           {v.why.doc_refs.map((d, i) => (
             <span key={d}>
               {i > 0 && <span className="mx-1 text-slate-700">·</span>}
-              <a
-                href={`https://github.com/`}
-                target="_blank"
-                rel="noreferrer"
-                className="font-mono text-slate-400 hover:text-sky-300"
-                title={d}
+              <span
+                className="rounded border border-slate-700/70 bg-slate-800/60 px-1.5 py-0.5 font-mono text-slate-400"
+                title={`Reference: ${d}`}
               >
                 {d}
-              </a>
+              </span>
             </span>
           ))}
         </footer>

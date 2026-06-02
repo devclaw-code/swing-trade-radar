@@ -53,7 +53,7 @@ export function SiteFooter() {
             Methodology
           </Link>
           <a
-            href="https://github.com/"
+            href="https://github.com/devclaw-code/swing-trade-radar"
             target="_blank"
             rel="noreferrer"
             className="hover:text-slate-100"

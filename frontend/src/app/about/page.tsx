@@ -6,9 +6,9 @@ export const metadata = {
     "How Swing Trade Radar produces its verdicts. Educational only — not financial advice.",
 };
 
-const REPO = "https://github.com/";
+const REPO = "https://github.com/devclaw-code/swing-trade-radar/";
 
-const STRATEGIES = [
+const STRATEGIES: { id: string; name: string; philosophy: string; notYetActive?: boolean }[] = [
   {
     id: "S1",
     name: "Trend (50/200 SMA + regime)",
@@ -20,6 +20,7 @@ const STRATEGIES = [
     name: "Clenow Time-Series Momentum",
     philosophy:
       "Rank the universe by 90d slope/vol; ride the top decile until it falls out. Survives most skeptic tests.",
+    notYetActive: true,
   },
   {
     id: "S3",
@@ -32,12 +33,14 @@ const STRATEGIES = [
     name: "Minervini VCP",
     philosophy:
       "Volatility contraction → breakout on volume. Heuristic-detected; surfaced as a score, not a hard fire.",
+    notYetActive: true,
   },
   {
     id: "S5",
     name: "PEAD (Post-Earnings Drift)",
     philosophy:
       "Earnings winners drift up for 2-4 weeks. Documented since 1989 and still alive in mega-cap tech.",
+    notYetActive: true,
   },
 ];
 
@@ -111,6 +114,11 @@ export default function AboutPage() {
               >
                 <div className="text-sm font-semibold text-slate-50">
                   <span className="font-mono text-slate-500">{s.id}</span> · {s.name}
+                  {s.notYetActive && (
+                    <span className="ml-2 inline-block rounded border border-amber-500/50 bg-amber-950/60 px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-amber-300">
+                      🚧 Not yet active — backtest pending
+                    </span>
+                  )}
                 </div>
                 <div className="mt-0.5 text-sm text-slate-300">{s.philosophy}</div>
               </li>
