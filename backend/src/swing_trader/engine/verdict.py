@@ -22,14 +22,16 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from datetime import date
+from datetime import UTC, date, datetime, time, timedelta
 from functools import lru_cache
 from pathlib import Path
 
 import yaml
 
+from ..config import settings
 from ..schemas import (
     BaseRateBlock,
+    EventBlackout,
     EvidenceItem,
     PriceLevel,
     RegimeContext,
@@ -40,6 +42,12 @@ from ..schemas import (
     WhyBlock,
 )
 from ..strategies.v2.base import StrategyResult
+from .blackout import (
+    BlackoutReason,
+    calendar_is_stale,
+    is_blackout,
+    next_earnings_for,
+)
 from .scoring import ScoringContext, compute_score_breakdown
 
 log = logging.getLogger(__name__)
@@ -163,6 +171,44 @@ def synthesize_verdict(
 
     verdict_kind = _verdict_kind(primary, len(supporting_results), regime, conviction)
 
+    # ---- W2: macro + earnings blackout gating ----
+    event_blackout: EventBlackout | None = None
+    pre_earnings_exit_by: datetime | None = None
+    calendar_stale = False
+    if settings.calendars_enabled:
+        calendar_stale = calendar_is_stale()
+        # We treat positive-conviction verdicts as long-side. Demote BUY → WATCH
+        # if a blackout is in force; AVOID/NO_SETUP unaffected.
+        if verdict_kind in ("BUY", "WATCH") and primary is not None and primary.fired:
+            br: BlackoutReason | None = is_blackout(ticker, "LONG")
+            if br is not None:
+                suppressed_to: VerdictKind = "WATCH"
+                event_blackout = EventBlackout(
+                    kind="earnings" if br.release == "EARNINGS" else "macro",
+                    release=br.release,
+                    scheduled_at=br.scheduled_at,
+                    hours_until=round(br.hours_until, 1),
+                    confirmed=br.confirmed,
+                    suppressed_to=suppressed_to,
+                )
+                # Append to invalidation list so the WhyBlock surfaces it.
+                invalidation.append(
+                    f"Calendar blackout: {br.as_text()} — demoted from {verdict_kind} to {suppressed_to}."
+                )
+                verdict_kind = suppressed_to
+        # Pre-earnings exit clamp: applies even when no blackout (e.g. earnings 4d out, hold=10d)
+        if primary is not None and primary.fired and primary.max_hold_days:
+            nxt = next_earnings_for(ticker)
+            if nxt is not None:
+                exit_by = nxt - timedelta(hours=settings.earnings_exit_hours)
+                hold_end = datetime.now(UTC) + timedelta(days=primary.max_hold_days)
+                if exit_by < hold_end:
+                    pre_earnings_exit_by = exit_by
+                    invalidation.append(
+                        f"Earnings {nxt.strftime('%Y-%m-%d %H:%MZ')} falls inside the hold window; "
+                        f"exit by {exit_by.strftime('%Y-%m-%d %H:%MZ')} (24h pre-print)."
+                    )
+
     headline = (
         primary.headline if primary and primary.headline
         else f"{ticker}: no setup fired today."
@@ -202,6 +248,8 @@ def synthesize_verdict(
             target = TargetLevel(price=primary.target_price, method="ATR-multiple target", rr=rr)
         if primary.max_hold_days is not None:
             max_hold = f"{primary.max_hold_days} trading days"
+            if pre_earnings_exit_by is not None:
+                max_hold += f" (clamped to earnings exit {pre_earnings_exit_by.strftime('%Y-%m-%d')})"
         if primary.entry_price is not None and primary.stop_price is not None:
             pos_hint = _position_size_hint(primary.entry_price, primary.stop_price)
         risk_tier = primary.risk_tier or "MEDIUM"
@@ -221,6 +269,9 @@ def synthesize_verdict(
         regime_context=regime,
         why=why,
         risk_tier=risk_tier,  # type: ignore[arg-type]
+        event_blackout=event_blackout,
+        pre_earnings_exit_by=pre_earnings_exit_by,
+        calendar_stale=calendar_stale,
     )
 
 
