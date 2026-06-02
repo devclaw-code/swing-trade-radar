@@ -17,6 +17,7 @@ Design notes:
 from __future__ import annotations
 
 import logging
+import time as _time
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
@@ -84,37 +85,48 @@ def fetch_fred_releases(horizon_days: int = 14, *, client: httpx.Client | None =
     c = client or httpx.Client(timeout=10.0)
     try:
         for release_id, (code, print_time_et) in _RELEASES.items():
-            try:
-                r = c.get(
-                    f"{settings.fred_base_url}/release/dates",
-                    params={
-                        "release_id": release_id,
-                        "api_key": key,
-                        "file_type": "json",
-                        "include_release_dates_with_no_data": "true",
-                        "realtime_start": today.isoformat(),
-                        "realtime_end": end.isoformat(),
-                    },
-                )
-                r.raise_for_status()
-                payload: dict[str, Any] = r.json()
-                for row in payload.get("release_dates", []):
-                    try:
-                        d = date.fromisoformat(row["date"])
-                    except (KeyError, ValueError):
-                        continue
-                    if d < today or d > end:
-                        continue
-                    out.append(
-                        MacroEvent(
-                            release=code,
-                            scheduled_at=_et_to_utc(d, print_time_et),
-                            source="fred",
-                        )
+            payload: dict[str, Any] | None = None
+            for attempt in range(3):
+                try:
+                    r = c.get(
+                        f"{settings.fred_base_url}/release/dates",
+                        params={
+                            "release_id": release_id,
+                            "api_key": key,
+                            "file_type": "json",
+                            "include_release_dates_with_no_data": "true",
+                            "realtime_start": today.isoformat(),
+                            "realtime_end": end.isoformat(),
+                        },
                     )
-            except httpx.HTTPError as e:
-                log.warning("fred release_id=%s failed: %s", release_id, e)
+                    if r.status_code == 429:
+                        _time.sleep(0.7 * (attempt + 1))
+                        continue
+                    r.raise_for_status()
+                    payload = r.json()
+                    break
+                except httpx.HTTPError as e:
+                    log.warning("fred release_id=%s attempt=%d failed: %s", release_id, attempt, e)
+                    _time.sleep(0.5 * (attempt + 1))
+                    continue
+            if not payload:
                 continue
+            for row in payload.get("release_dates", []):
+                try:
+                    d = date.fromisoformat(row["date"])
+                except (KeyError, ValueError):
+                    continue
+                if d < today or d > end:
+                    continue
+                out.append(
+                    MacroEvent(
+                        release=code,
+                        scheduled_at=_et_to_utc(d, print_time_et),
+                        source="fred",
+                    )
+                )
+            # gentle pacing — FRED's per-IP rate limiter is twitchy
+            _time.sleep(0.25)
     finally:
         if own:
             c.close()
