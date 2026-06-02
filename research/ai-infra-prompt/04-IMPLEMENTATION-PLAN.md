@@ -6,7 +6,7 @@ Order of execution agreed with Aditya 2026-06-02: **(a) plan → (c) data plumbi
 
 ## Workstreams
 
-### W1 — Calendar data plumbing (this sprint, in progress)
+### W1 — Calendar data plumbing (DONE)
 Foundation. Nothing else can land until this exists.
 
 - [x] W1.1 Add `FRED_API_KEY`, `FINNHUB_API_KEY` to `config.Settings` (no-op if unset)
@@ -17,15 +17,15 @@ Foundation. Nothing else can land until this exists.
 - [x] W1.6 Scheduler: new daily `refresh_calendars` job at 06:00 UTC; idempotent upsert
 - [x] W1.7 Add `httpx` retry helper + `icalendar` dep
 - [x] W1.8 Tests: macro fixture, earnings fixture, blackout window edge cases (T-48h±1m), fail-open path
-- [ ] W1.9 README env-var docs + `.env.example`
+- [x] W1.9 README env-var docs + `.env.example`
 
-### W2 — Macro-event gate (after W1)
+### W2 — Macro-event gate (DONE — live-verified AVGO BUY→WATCH at T-27.6h)
 The synthesizer rule that consumes W1.
 
-- [ ] W2.1 `Verdict` schema: `pre_earnings_exit_by: date | None`, `macro_blackout: MacroBlock | None`
-- [ ] W2.2 `engine/verdict.synthesize_verdict` — call `is_blackout`; demote BUY → WATCH if macro within 48h; clamp `max_hold_days` if earnings within hold window
-- [ ] W2.3 `WhyBlock.what_could_invalidate` — append macro/earnings exit reason
-- [ ] W2.4 Tests: BUY suppression on CPI-eve, WATCH demotion, hold-clamp on earnings T-3, fail-open when calendar stale
+- [x] W2.1 `Verdict` schema: `pre_earnings_exit_by: date | None`, `macro_blackout: MacroBlock | None`
+- [x] W2.2 `engine/verdict.synthesize_verdict` — call `is_blackout`; demote BUY → WATCH if macro within 48h; clamp `max_hold_days` if earnings within hold window
+- [x] W2.3 `WhyBlock.what_could_invalidate` — append macro/earnings exit reason
+- [x] W2.4 Tests: BUY suppression on CPI-eve, WATCH demotion, hold-clamp on earnings T-3, fail-open when calendar stale
 
 ### W3 — Risk geometry hardening (independent, ship anytime)
 Code-audit punch list section A — see `02-CODE-AUDIT.md` §6A.
