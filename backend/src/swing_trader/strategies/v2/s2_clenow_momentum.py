@@ -125,7 +125,7 @@ class ClenowMomentumStrategy(V2Strategy):
 
         evidence: list[EvidenceItem] = [
             EvidenceItem(
-                factor=f"Annualised slope × R² = {score_val:.3f}" if not math.isnan(score_val) else "Score N/A",
+                factor=f"Annualised slope x R² = {score_val:.3f}" if not math.isnan(score_val) else "Score N/A",
                 value=round(score_val, 4) if not math.isnan(score_val) else None,
                 weight=0.40,
                 passed=not math.isnan(score_val),

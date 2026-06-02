@@ -142,7 +142,7 @@ def compute_base_rate(
         try:
             if not setup_signature(df, i):
                 continue
-        except Exception:
+        except Exception:  # robust against odd row data
             continue
         sim = _simulate_trade(df, i, atr_col=atr_col, max_hold_days=max_hold_days)
         if sim is None:
