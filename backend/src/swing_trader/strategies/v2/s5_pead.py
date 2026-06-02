@@ -12,7 +12,9 @@ Fire BUY if:
     - Close >= open of gap day (held the gap).
     - Close > SMA200 (trend gate).
 
-If earnings calendar is unavailable we return a no-fire result with a TODO note.
+If earnings calendar is unavailable we return a no-fire result with a note.
+Earnings dates come from basket_data["earnings_dates"], sourced from the events
+calendar table (W1/W2 refresh) with a yfinance fallback in signal_generator.
 """
 
 from __future__ import annotations
@@ -69,7 +71,7 @@ class PeadStrategy(V2Strategy):
                     weight=1.0,
                     passed=False,
                     note=(
-                        "no earnings calendar provided — TODO(devclaw): wire yfinance earnings_dates"
+                        "no earnings calendar for this ticker — PEAD inactive"
                         if not earnings_dates
                         else f"no earnings in last 20 calendar days (most recent shown: {earnings_dates[:3]})"
                     ),

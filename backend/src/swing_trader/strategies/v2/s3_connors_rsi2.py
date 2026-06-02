@@ -14,8 +14,10 @@ Exit:
     - 5 trading days elapsed, OR
     - 2× ATR(14) stop hit.
 
-If the optional basket_data fields are missing we degrade gracefully and emit a TODO
-in the evidence (still allowed to fire if the per-ticker rules pass).
+If the optional basket_data fields are missing we degrade gracefully and skip
+the affected gate (still allowed to fire if the per-ticker rules pass).
+Earnings dates are fed via basket_data["earnings_dates"] from the events
+calendar table (W1/W2 refresh), with a yfinance fallback in signal_generator.
 """
 
 from __future__ import annotations
@@ -77,7 +79,7 @@ class ConnorsRsi2Strategy(V2Strategy):
 
         # Earnings gate
         # basket_data["earnings_dates"] expected as dict[ticker, list[date]]
-        # If absent we set "skipped" and let the gate pass with a TODO note.
+        # If absent we set "skipped" and let the gate pass with a note.
         earnings_dates: list[date] = []
         if basket_data and isinstance(basket_data.get("earnings_dates"), dict):
             earnings_dates = list(basket_data["earnings_dates"].get(ticker, []) or [])
@@ -94,7 +96,7 @@ class ConnorsRsi2Strategy(V2Strategy):
             )
         else:
             c_earn = True
-            earn_note = "earnings calendar unavailable — TODO(devclaw): wire yfinance earnings_dates"
+            earn_note = "earnings calendar unavailable for this ticker — gate skipped"
 
         evidence: list[EvidenceItem] = [
             EvidenceItem(
