@@ -3,15 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import {
-  type FilterMode,
   type FilteredVerdict,
+  type FilterMode,
   type LastUpdated,
   type MarginalVerdict,
   type RegimeResponse,
+  swrFetcher,
   type Verdict,
   type VerdictKind,
   type VerdictsResponse,
-  swrFetcher,
 } from "@/lib/api";
 import { RegimeCard } from "./RegimeCard";
 import { VerdictCard } from "./VerdictCard";
@@ -77,8 +77,7 @@ export function Dashboard({ initialVerdicts, initialRegime, initialUpdated }: Pr
     }
   };
 
-  const verdictsUrl =
-    mode === "conservative" ? "/api/verdicts?mode=conservative" : "/api/verdicts";
+  const verdictsUrl = mode === "conservative" ? "/api/verdicts?mode=conservative" : "/api/verdicts";
 
   const { data: verdictsData } = useSWR<VerdictsResponse>(verdictsUrl, swrFetcher, {
     fallbackData: mode === "all" ? initialVerdicts : undefined,
@@ -107,10 +106,7 @@ export function Dashboard({ initialVerdicts, initialRegime, initialUpdated }: Pr
   const marginal: MarginalVerdict[] = verdictsData?.marginal ?? [];
   const filteredOut: FilteredVerdict[] = verdictsData?.filtered_out ?? [];
 
-  const marginalTickers = useMemo(
-    () => new Set(marginal.map((m) => m.verdict.ticker)),
-    [marginal],
-  );
+  const marginalTickers = useMemo(() => new Set(marginal.map((m) => m.verdict.ticker)), [marginal]);
 
   const baseList: Verdict[] = useMemo(() => {
     if (conservative) {
@@ -148,7 +144,9 @@ export function Dashboard({ initialVerdicts, initialRegime, initialUpdated }: Pr
 
       {/* Mode toggle */}
       <div className="flex flex-col gap-2 rounded-lg border border-slate-700/60 bg-slate-900 p-2 sm:flex-row sm:items-center sm:gap-3 sm:p-3">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Mode</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+          Mode
+        </span>
         <div className="flex gap-1.5 sm:gap-2">
           <button
             type="button"
@@ -178,7 +176,9 @@ export function Dashboard({ initialVerdicts, initialRegime, initialUpdated }: Pr
       {/* Filter bar */}
       <div className="flex flex-col gap-2 rounded-lg border border-slate-700/60 bg-slate-900 p-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:p-3">
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Verdict</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            Verdict
+          </span>
           {(
             [
               ["all", `All (${baseList.length})`],
@@ -199,7 +199,9 @@ export function Dashboard({ initialVerdicts, initialRegime, initialUpdated }: Pr
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Risk</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            Risk
+          </span>
           {(["all", "LOW", "MEDIUM", "HIGH"] as const).map((r) => (
             <button
               key={r}
@@ -213,7 +215,10 @@ export function Dashboard({ initialVerdicts, initialRegime, initialUpdated }: Pr
         </div>
 
         <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
-          <label htmlFor="ticker-search" className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+          <label
+            htmlFor="ticker-search"
+            className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-500"
+          >
             Ticker
           </label>
           <input

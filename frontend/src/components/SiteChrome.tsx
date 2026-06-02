@@ -8,13 +8,15 @@ const links = [
 
 export function SiteNav() {
   return (
-    <nav
-      aria-label="Primary"
-      className="border-b border-slate-700 bg-slate-900"
-    >
+    <nav aria-label="Primary" className="border-b border-slate-700 bg-slate-900">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:px-6">
-        <Link href="/" className="flex items-center gap-2 text-sm font-bold tracking-tight text-slate-50">
-          <span aria-hidden className="text-base">📡</span>
+        <Link
+          href="/"
+          className="flex items-center gap-2 text-sm font-bold tracking-tight text-slate-50"
+        >
+          <span aria-hidden className="text-base">
+            📡
+          </span>
           <span className="hidden xs:inline">Swing Trade Radar</span>
           <span className="inline xs:hidden">STR</span>
           <span className="ml-1 hidden rounded border border-slate-700 bg-slate-800 px-1.5 py-0.5 font-mono text-[10px] text-slate-300 sm:inline">

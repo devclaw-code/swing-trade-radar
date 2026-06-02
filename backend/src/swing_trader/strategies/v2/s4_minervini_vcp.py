@@ -74,7 +74,7 @@ class MinerviniVcpStrategy(V2Strategy):
         tt_score, _legs = _trend_template_score(df)
 
         # 2. Volatility contraction (ATR ratio)
-        atr20 = df["high"].combine(df["low"], lambda h, l: h - l).rolling(20).mean()
+        atr20 = df["high"].combine(df["low"], lambda h, lo: h - lo).rolling(20).mean()
         # Use ATR14 already present, fall back to true-range proxy
         atr_now = float(df.get("atr14", atr20).iloc[-1])
         atr_long = float(df.get("atr14", atr20).rolling(60).mean().iloc[-1])

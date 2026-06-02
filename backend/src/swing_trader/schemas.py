@@ -11,7 +11,8 @@ References:
 
 from __future__ import annotations
 
-from datetime import date as _date, datetime as _datetime
+from datetime import date as _date
+from datetime import datetime as _datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field

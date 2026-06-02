@@ -42,7 +42,6 @@ def test_s1_does_not_fire_in_downtrend(downtrend_df, uptrend_df):
 
 def test_s2_fires_when_top_quintile(uptrend_df, downtrend_df):
     enriched_up = _enrich(uptrend_df)
-    enriched_down = _enrich(downtrend_df)
     basket = {"WIN": uptrend_df, "LOSE1": downtrend_df, "LOSE2": downtrend_df, "LOSE3": downtrend_df, "LOSE4": downtrend_df}
     scores = compute_basket_scores(basket)
     assert scores["WIN"] > scores["LOSE1"]

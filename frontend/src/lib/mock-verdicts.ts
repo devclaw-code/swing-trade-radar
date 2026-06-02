@@ -324,13 +324,38 @@ export const mockVerdicts: Verdict[] = [
     day_change_pct: 0.002,
     sparkline: spark(375, 0.02, 0.008, 53),
     why: {
-      headline: "No strategy fires today. Trend is mildly up but no momentum/mean-rev/VCP/PEAD trigger.",
+      headline:
+        "No strategy fires today. Trend is mildly up but no momentum/mean-rev/VCP/PEAD trigger.",
       evidence: [
-        { factor: "S1 Trend", value: "neutral", weight: 0.2, passed: false, note: "above SMAs but no fresh entry" },
-        { factor: "S2 Clenow", value: "rank 38", weight: 0.2, passed: false, note: "outside top decile" },
+        {
+          factor: "S1 Trend",
+          value: "neutral",
+          weight: 0.2,
+          passed: false,
+          note: "above SMAs but no fresh entry",
+        },
+        {
+          factor: "S2 Clenow",
+          value: "rank 38",
+          weight: 0.2,
+          passed: false,
+          note: "outside top decile",
+        },
         { factor: "S3 RSI(2)", value: "47", weight: 0.2, passed: false, note: "not oversold" },
-        { factor: "S4 VCP", value: "—", weight: 0.2, passed: false, note: "no contraction sequence" },
-        { factor: "S5 PEAD", value: "—", weight: 0.2, passed: false, note: "no recent earnings beat" },
+        {
+          factor: "S4 VCP",
+          value: "—",
+          weight: 0.2,
+          passed: false,
+          note: "no contraction sequence",
+        },
+        {
+          factor: "S5 PEAD",
+          value: "—",
+          weight: 0.2,
+          passed: false,
+          note: "no recent earnings beat",
+        },
       ],
       historical_base_rate: null,
       what_could_invalidate: [],

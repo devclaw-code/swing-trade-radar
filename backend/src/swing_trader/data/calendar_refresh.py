@@ -14,8 +14,8 @@ from datetime import UTC, datetime
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from ..config import settings
-from .earnings_calendar import fetch_earnings_window
 from .db import Event, session_scope
+from .earnings_calendar import fetch_earnings_window
 from .macro_calendar import fetch_next_window
 
 log = logging.getLogger(__name__)

@@ -2,7 +2,8 @@ import Link from "next/link";
 
 export const metadata = {
   title: "About / Methodology",
-  description: "How Swing Trade Radar produces its verdicts. Educational only — not financial advice.",
+  description:
+    "How Swing Trade Radar produces its verdicts. Educational only — not financial advice.",
 };
 
 const REPO = "https://github.com/";
@@ -65,15 +66,16 @@ export default function AboutPage() {
           <strong className="text-amber-50">This is a research desk, not a broker.</strong> Swing
           Trade Radar produces daily algorithmic verdicts on a fixed list of NDX-100 mega-caps. It
           does not place trades, it does not know your account, and it is{" "}
-          <strong className="text-amber-50">not financial advice</strong>. Educational use only — paper-trade and verify
-          everything yourself.
+          <strong className="text-amber-50">not financial advice</strong>. Educational use only —
+          paper-trade and verify everything yourself.
         </div>
 
         <div>
           <h2 className="mb-2 text-lg font-bold text-slate-50">How a verdict is built</h2>
           <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-slate-200">
             <li>
-              Daily OHLCV is fetched (yfinance primary, Alpha Vantage fallback) and cached in SQLite.
+              Daily OHLCV is fetched (yfinance primary, Alpha Vantage fallback) and cached in
+              SQLite.
             </li>
             <li>
               Five rule-based strategies are evaluated independently on every ticker. Each returns a
@@ -88,12 +90,13 @@ export default function AboutPage() {
             </li>
             <li>
               The synthesizer combines outputs into <code>BUY</code>, <code>WATCH</code>,{" "}
-              <code>AVOID</code>, or <code>NO_SETUP</code> — with an explicit conviction score, stop,
-              target, R:R, and a historical base rate computed from 10 years of cached bars.
+              <code>AVOID</code>, or <code>NO_SETUP</code> — with an explicit conviction score,
+              stop, target, R:R, and a historical base rate computed from 10 years of cached bars.
             </li>
             <li>
-              Counter-arguments are pulled from a curated <code className="font-mono">risk_notes.yaml</code>{" "}
-              keyed by setup-type and ticker, so every claim is auditable against the source research.
+              Counter-arguments are pulled from a curated{" "}
+              <code className="font-mono">risk_notes.yaml</code> keyed by setup-type and ticker, so
+              every claim is auditable against the source research.
             </li>
           </ol>
         </div>
@@ -114,7 +117,10 @@ export default function AboutPage() {
             ))}
           </ul>
           <p className="mt-3 text-sm text-slate-400">
-            See <Link href="/strategies" className="text-sky-400 hover:text-sky-300 hover:underline">Strategies</Link>{" "}
+            See{" "}
+            <Link href="/strategies" className="text-sky-400 hover:text-sky-300 hover:underline">
+              Strategies
+            </Link>{" "}
             for current backtest stats (Sharpe, deflated Sharpe, win rate, max DD).
           </p>
         </div>

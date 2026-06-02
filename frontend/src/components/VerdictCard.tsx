@@ -49,9 +49,7 @@ function ReliabilityBadge({
 }) {
   const tone = reliabilityBadge[display.tier];
   const label = reliabilityLabel[display.tier];
-  const sizing = prominent
-    ? "px-2.5 py-1 text-xs"
-    : "px-2 py-0.5 text-[10px] sm:text-[11px]";
+  const sizing = prominent ? "px-2.5 py-1 text-xs" : "px-2 py-0.5 text-[10px] sm:text-[11px]";
   const title =
     display.tier === "insufficient"
       ? `Only ${display.sample_size} historical occurrences — too few to draw conclusions`
@@ -240,7 +238,13 @@ function Section({
   );
 }
 
-export function VerdictCard({ v, defaultExpanded = false }: { v: Verdict; defaultExpanded?: boolean }) {
+export function VerdictCard({
+  v,
+  defaultExpanded = false,
+}: {
+  v: Verdict;
+  defaultExpanded?: boolean;
+}) {
   const muted = v.verdict === "AVOID" || v.verdict === "NO_SETUP";
   const isBuy = v.verdict === "BUY";
   const dayChange = v.day_change_pct ?? 0;
@@ -302,8 +306,7 @@ export function VerdictCard({ v, defaultExpanded = false }: { v: Verdict; defaul
           <div className="text-xs text-slate-400">
             {v.primary_setup ? (
               <span>
-                Setup:{" "}
-                <span className="font-medium text-slate-100">{v.primary_setup}</span>
+                Setup: <span className="font-medium text-slate-100">{v.primary_setup}</span>
               </span>
             ) : (
               <span className="text-slate-500">No active setup</span>
@@ -313,7 +316,11 @@ export function VerdictCard({ v, defaultExpanded = false }: { v: Verdict; defaul
         </div>
 
         {typeof v.score === "number" && v.score_breakdown && (
-          <ScoreBadge score={v.score} breakdown={v.score_breakdown} correlationPenalty={v.correlation_penalty ?? 0} />
+          <ScoreBadge
+            score={v.score}
+            breakdown={v.score_breakdown}
+            correlationPenalty={v.correlation_penalty ?? 0}
+          />
         )}
 
         <p className="text-sm leading-snug text-slate-200">{v.why.headline}</p>
@@ -339,7 +346,9 @@ export function VerdictCard({ v, defaultExpanded = false }: { v: Verdict; defaul
                 {v.stop_loss ? `$${fmt(v.stop_loss.price)}` : "—"}
               </div>
               {v.stop_loss && (
-                <div className="text-[10px] text-rose-400/80">-{v.stop_loss.risk_pct.toFixed(1)}%</div>
+                <div className="text-[10px] text-rose-400/80">
+                  -{v.stop_loss.risk_pct.toFixed(1)}%
+                </div>
               )}
             </div>
             <div>
@@ -349,13 +358,16 @@ export function VerdictCard({ v, defaultExpanded = false }: { v: Verdict; defaul
               </div>
               {v.target && v.entry_zone && v.entry_zone.price > 0 && (
                 <div className="text-[10px] text-emerald-400/80">
-                  +{(((v.target.price - v.entry_zone.price) / v.entry_zone.price) * 100).toFixed(1)}%
+                  +{(((v.target.price - v.entry_zone.price) / v.entry_zone.price) * 100).toFixed(1)}
+                  %
                 </div>
               )}
             </div>
             <div>
               <div className="text-[10px] uppercase text-slate-500">R:R</div>
-              <div className="font-mono text-slate-100">{v.target ? v.target.rr.toFixed(2) : "—"}</div>
+              <div className="font-mono text-slate-100">
+                {v.target ? v.target.rr.toFixed(2) : "—"}
+              </div>
             </div>
             <div className="col-span-2 sm:col-span-1">
               <div className="text-[10px] uppercase text-slate-500">Hold</div>
@@ -366,7 +378,11 @@ export function VerdictCard({ v, defaultExpanded = false }: { v: Verdict; defaul
 
         {/* Collapsible sections */}
         <div className="space-y-2 pt-1">
-          <Section title="Why this trade" count={v.why.evidence.length} defaultOpen={expanded || (!muted && v.verdict === "BUY")}>
+          <Section
+            title="Why this trade"
+            count={v.why.evidence.length}
+            defaultOpen={expanded || (!muted && v.verdict === "BUY")}
+          >
             <ul className="space-y-1">
               {v.why.evidence.map((e) => (
                 <EvidenceRow key={e.factor} e={e} />
@@ -381,7 +397,11 @@ export function VerdictCard({ v, defaultExpanded = false }: { v: Verdict; defaul
           </Section>
 
           {v.why.what_could_invalidate.length > 0 && (
-            <Section title="What could invalidate" count={v.why.what_could_invalidate.length} defaultOpen={expanded}>
+            <Section
+              title="What could invalidate"
+              count={v.why.what_could_invalidate.length}
+              defaultOpen={expanded}
+            >
               <ul className="space-y-1 text-sm text-slate-200">
                 {v.why.what_could_invalidate.map((x) => (
                   <li key={x} className="flex gap-2">
@@ -424,8 +444,11 @@ export function VerdictCard({ v, defaultExpanded = false }: { v: Verdict; defaul
                 </p>
               ) : v.historical_stats_display?.tier === "low" ? (
                 <p className="text-xs leading-snug text-slate-400">
-                  <span className="text-amber-400" title="Based on a small historical sample">⚠</span>{" "}
-                  On <span className="font-mono text-slate-300">{v.ticker}</span>, this setup occurred{" "}
+                  <span className="text-amber-400" title="Based on a small historical sample">
+                    ⚠
+                  </span>{" "}
+                  On <span className="font-mono text-slate-300">{v.ticker}</span>, this setup
+                  occurred{" "}
                   <span className="font-semibold text-slate-300">
                     {v.why.historical_base_rate.occurrences}
                   </span>{" "}
@@ -445,7 +468,8 @@ export function VerdictCard({ v, defaultExpanded = false }: { v: Verdict; defaul
                 </p>
               ) : (
                 <p className="text-sm text-slate-200">
-                  On <span className="font-mono text-slate-50">{v.ticker}</span>, this setup occurred{" "}
+                  On <span className="font-mono text-slate-50">{v.ticker}</span>, this setup
+                  occurred{" "}
                   <span className="font-semibold text-slate-50">
                     {v.why.historical_base_rate.occurrences}
                   </span>{" "}

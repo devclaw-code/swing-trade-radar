@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -36,6 +37,9 @@ from .risk_classifier import ClassifiedSignal, classify
 from .sample_size import apply_sample_size_adjustment
 from .scoring import apply_correlation_penalties
 from .verdict import attach_score_breakdown, synthesize_verdict
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 log = logging.getLogger(__name__)
 
@@ -291,8 +295,6 @@ def generate_verdicts(
 
     Returns: {summary, verdicts: [Verdict.model_dump]}
     """
-    import pandas as pd  # local — keep top-level imports lean
-
     started = datetime.now(UTC).replace(tzinfo=None)
     strategies = default_v2_strategies()
 
