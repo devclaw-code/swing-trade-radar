@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pandas as pd
-import pytest
 
 from swing_trader.engine.indicators import enrich
 from swing_trader.strategies.v2.s1_trend_50_200 import TrendFiftyTwoHundredStrategy

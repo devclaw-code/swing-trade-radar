@@ -26,6 +26,13 @@ from ...schemas import EvidenceItem
 from .base import StrategyResult, V2Strategy
 
 FIRE_THRESHOLD = 0.70
+CONTRACTION_FULL_CREDIT_RATIO = 0.70
+
+
+def _contraction_range() -> float:
+    if not 0.0 < CONTRACTION_FULL_CREDIT_RATIO < 1.0:
+        raise ValueError("CONTRACTION_FULL_CREDIT_RATIO must be between 0 and 1 (exclusive)")
+    return 1.0 - CONTRACTION_FULL_CREDIT_RATIO
 
 
 def _trend_template_score(df: pd.DataFrame) -> tuple[float, dict[str, bool]]:
@@ -75,13 +82,15 @@ class MinerviniVcpStrategy(V2Strategy):
         tt_score, _legs = _trend_template_score(df)
 
         # 2. Volatility contraction (ATR ratio)
-        atr20 = df["high"].combine(df["low"], lambda high, low: high - low).rolling(20).mean()
+        high_low_range_sma20 = (
+            df["high"].combine(df["low"], lambda high, low: high - low).rolling(20).mean()
+        )
         # Use ATR14 already present, fall back to true-range proxy
-        atr_now = float(df.get("atr14", atr20).iloc[-1])
-        atr_long = float(df.get("atr14", atr20).rolling(60).mean().iloc[-1])
+        atr_now = float(df.get("atr14", high_low_range_sma20).iloc[-1])
+        atr_long = float(df.get("atr14", high_low_range_sma20).rolling(60).mean().iloc[-1])
         ratio = atr_now / atr_long if atr_long and atr_long > 0 else 1.0
         # ratio <= 0.7 gets full credit after clipping; ratio >= 1.0 gets zero.
-        contraction_score = max(0.0, min(1.0, (1.0 - ratio) / 0.3))
+        contraction_score = max(0.0, min(1.0, (1.0 - ratio) / _contraction_range()))
 
         # 3. Volume dry-up
         vol_sma20 = float(df["volume"].rolling(20).mean().iloc[-1])
