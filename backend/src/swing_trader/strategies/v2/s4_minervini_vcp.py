@@ -80,7 +80,7 @@ class MinerviniVcpStrategy(V2Strategy):
         atr_now = float(df.get("atr14", atr20).iloc[-1])
         atr_long = float(df.get("atr14", atr20).rolling(60).mean().iloc[-1])
         ratio = atr_now / atr_long if atr_long and atr_long > 0 else 1.0
-        # 0.7 → 1.0; 1.0 → 0.0; clip
+        # ratio <= 0.7 gets full credit after clipping; ratio >= 1.0 gets zero.
         contraction_score = max(0.0, min(1.0, (1.0 - ratio) / 0.3))
 
         # 3. Volume dry-up
