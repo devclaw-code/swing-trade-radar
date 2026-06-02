@@ -9,14 +9,14 @@ Order of execution agreed with Aditya 2026-06-02: **(a) plan → (c) data plumbi
 ### W1 — Calendar data plumbing (this sprint, in progress)
 Foundation. Nothing else can land until this exists.
 
-- [ ] W1.1 Add `FRED_API_KEY`, `FINNHUB_API_KEY` to `config.Settings` (no-op if unset)
-- [ ] W1.2 Add `Event` SQLAlchemy model + migration (`kind`, `symbol`, `release`, `scheduled_at`, `confirmed`, `source`, `fetched_at`)
-- [ ] W1.3 `data/macro_calendar.py` — FRED `releases/dates` + FOMC ICS hybrid; pure-fn `fetch_next_14d() -> list[EventRow]`
-- [ ] W1.4 `data/earnings_calendar.py` — Finnhub primary, AlphaVantage `EARNINGS_CALENDAR` middle fallback, yfinance per-ticker last resort. Function: `fetch_earnings_next_14d(tickers) -> list[EventRow]`
-- [ ] W1.5 `engine/blackout.py` — `is_blackout(ticker, side, now) -> str | None`. Pure read against `events` table; no external IO
-- [ ] W1.6 Scheduler: new daily `refresh_calendars` job at 06:00 UTC; idempotent upsert
-- [ ] W1.7 Add `httpx` retry helper + `icalendar` dep
-- [ ] W1.8 Tests: macro fixture, earnings fixture, blackout window edge cases (T-48h±1m), fail-open path
+- [x] W1.1 Add `FRED_API_KEY`, `FINNHUB_API_KEY` to `config.Settings` (no-op if unset)
+- [x] W1.2 Add `Event` SQLAlchemy model + migration (`kind`, `symbol`, `release`, `scheduled_at`, `confirmed`, `source`, `fetched_at`)
+- [x] W1.3 `data/macro_calendar.py` — FRED `releases/dates` + FOMC ICS hybrid; pure-fn `fetch_next_14d() -> list[EventRow]`
+- [x] W1.4 `data/earnings_calendar.py` — Finnhub primary, AlphaVantage `EARNINGS_CALENDAR` middle fallback, yfinance per-ticker last resort. Function: `fetch_earnings_next_14d(tickers) -> list[EventRow]`
+- [x] W1.5 `engine/blackout.py` — `is_blackout(ticker, side, now) -> str | None`. Pure read against `events` table; no external IO
+- [x] W1.6 Scheduler: new daily `refresh_calendars` job at 06:00 UTC; idempotent upsert
+- [x] W1.7 Add `httpx` retry helper + `icalendar` dep
+- [x] W1.8 Tests: macro fixture, earnings fixture, blackout window edge cases (T-48h±1m), fail-open path
 - [ ] W1.9 README env-var docs + `.env.example`
 
 ### W2 — Macro-event gate (after W1)

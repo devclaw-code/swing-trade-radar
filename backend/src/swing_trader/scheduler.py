@@ -12,6 +12,7 @@ from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from .config import settings
+from .data.calendar_refresh import refresh_calendars
 
 log = logging.getLogger(__name__)
 _scheduler: BackgroundScheduler | None = None
@@ -60,6 +61,31 @@ def start_scheduler(refresh_fn: Callable[[], dict]) -> BackgroundScheduler:
             refresh_fn,
             DateTrigger(run_date=datetime.now(UTC).replace(tzinfo=None) + timedelta(seconds=5)),
             id="boot_refresh",
+            replace_existing=True,
+        )
+    if settings.calendars_enabled:
+        sched.add_job(
+            lambda: refresh_calendars(settings.tickers),
+            CronTrigger(
+                hour=settings.calendar_refresh_hour_utc,
+                minute=settings.calendar_refresh_minute_utc,
+                timezone="UTC",
+            ),
+            id="refresh_calendars",
+            max_instances=1,
+            coalesce=True,
+            replace_existing=True,
+        )
+        log.info(
+            "calendar refresh cron: %02d:%02dZ daily",
+            settings.calendar_refresh_hour_utc,
+            settings.calendar_refresh_minute_utc,
+        )
+        # boot-time hydrate so a cold start has data immediately
+        sched.add_job(
+            lambda: refresh_calendars(settings.tickers),
+            DateTrigger(run_date=datetime.now(UTC).replace(tzinfo=None) + timedelta(seconds=10)),
+            id="boot_calendar_refresh",
             replace_existing=True,
         )
     sched.start()
