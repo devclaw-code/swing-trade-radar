@@ -252,6 +252,28 @@ export interface VerdictsResponse {
   count: number;
   as_of: string;
   verdicts: Verdict[];
+  // Present when the request was made with `?mode=conservative`.
+  mode?: "all" | "conservative";
+  passed?: Verdict[];
+  marginal?: MarginalVerdict[];
+  filtered_out?: FilteredVerdict[];
+}
+
+export type FilterMode = "all" | "conservative";
+
+export interface FilterReason {
+  code: string;
+  message: string;
+}
+
+export interface FilteredVerdict {
+  verdict: Verdict;
+  reasons: FilterReason[];
+}
+
+export interface MarginalVerdict {
+  verdict: Verdict;
+  reasons: FilterReason[];
 }
 
 export interface RegimeResponse extends RegimeContext {
@@ -277,9 +299,10 @@ async function withMockFallback<T>(path: string, mock: () => T): Promise<T> {
   }
 }
 
-export async function getVerdicts(): Promise<VerdictsResponse> {
+export async function getVerdicts(mode: FilterMode = "all"): Promise<VerdictsResponse> {
   const { mockVerdicts, mockAsOf } = await import("./mock-verdicts");
-  return withMockFallback("/api/verdicts", () => ({
+  const path = mode === "conservative" ? "/api/verdicts?mode=conservative" : "/api/verdicts";
+  return withMockFallback(path, () => ({
     count: mockVerdicts.length,
     as_of: mockAsOf,
     verdicts: mockVerdicts,

@@ -211,3 +211,49 @@ class Verdict(BaseModel):
         le=100.0,
         description="Points subtracted from the headline score because of high correlation with higher-scoring trades in the same dashboard run.",
     )
+
+
+# ---------------------------------------------------------------------------
+# Conservative-mode filter shapes
+# ---------------------------------------------------------------------------
+
+
+FilterMode = Literal["all", "conservative"]
+
+
+class FilterReason(BaseModel):
+    """Why a verdict was filtered out (one rule that failed)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    code: str = Field(..., description="Stable rule id, e.g. 'stop_loss_pct'.")
+    message: str = Field(..., description="Short human-readable reason, e.g. 'stop 12% > 8%'.")
+
+
+class FilteredVerdict(BaseModel):
+    """A verdict that didn't pass the conservative filter, with the reasons it failed."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    verdict: Verdict
+    reasons: list[FilterReason] = Field(default_factory=list)
+
+
+class MarginalVerdict(BaseModel):
+    """A verdict that passed the hard filter but is downgraded to 'marginal'."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    verdict: Verdict
+    reasons: list[FilterReason] = Field(default_factory=list)
+
+
+class ConservativeFilterResult(BaseModel):
+    """API payload for ``mode=conservative``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    mode: FilterMode
+    passed: list[Verdict] = Field(default_factory=list)
+    marginal: list[MarginalVerdict] = Field(default_factory=list)
+    filtered_out: list[FilteredVerdict] = Field(default_factory=list)

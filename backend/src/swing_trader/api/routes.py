@@ -12,6 +12,7 @@ from ..data.db import Meta, Run, session_scope
 from ..data.news_scraper import latest_news
 from ..data.price_fetcher import load_ohlcv
 from ..engine.backtester import backtest_all, latest_results
+from ..engine.conservative import apply_conservative_filter
 from ..engine.regime import compute_regime, offline_default
 from ..engine.signal_generator import (
     generate_verdicts,
@@ -61,8 +62,8 @@ def strategies(
         return {"count": len(sigs), "signals": sigs, "deprecated": True}
 
     # v2: list strategy metadata
-    from ..strategies.v2.base import V2Strategy
     from ..engine.signal_generator import default_v2_strategies
+    from ..strategies.v2.base import V2Strategy
 
     descriptions: dict[str, str] = {
         "S1_trend_50_200": (
@@ -121,10 +122,31 @@ def strategies_for_ticker(ticker: str) -> dict:
 
 
 @router.get("/verdicts")
-def verdicts_all(verdict: str | None = None) -> dict:
-    """All tickers, today's verdicts (most recent per ticker)."""
+def verdicts_all(
+    verdict: str | None = None,
+    mode: str = "all",
+) -> dict:
+    """All tickers, today's verdicts (most recent per ticker).
+
+    ``mode=all`` (default): legacy shape ``{count, verdicts}``.
+    ``mode=conservative``: also includes ``passed``, ``marginal``, ``filtered_out``
+    arrays from :func:`apply_conservative_filter`. ``verdicts`` is preserved
+    for backward compat and contains the *unfiltered* list.
+    """
     items = latest_verdicts(verdict=verdict)
-    return {"count": len(items), "verdicts": items}
+    if mode != "conservative":
+        return {"count": len(items), "verdicts": items}
+
+    parsed = [Verdict(**row) for row in items]
+    result = apply_conservative_filter(parsed, mode="conservative")
+    return {
+        "count": len(items),
+        "verdicts": items,  # backward-compat: full list
+        "mode": result.mode,
+        "passed": [v.model_dump(mode="json") for v in result.passed],
+        "marginal": [m.model_dump(mode="json") for m in result.marginal],
+        "filtered_out": [f.model_dump(mode="json") for f in result.filtered_out],
+    }
 
 
 @router.get("/verdicts/{ticker}", response_model=Verdict)
@@ -139,7 +161,7 @@ def verdict_for_ticker(ticker: str) -> Verdict:
 def regime() -> RegimeContext:
     try:
         return compute_regime()
-    except Exception:  # noqa: BLE001
+    except Exception:
         return offline_default()
 
 
