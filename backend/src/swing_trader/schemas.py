@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field
 VerdictKind = Literal["BUY", "WATCH", "AVOID", "NO_SETUP"]
 RiskTier = Literal["LOW", "MEDIUM", "HIGH"]
 SanitySeverity = Literal["info", "warning", "high"]
+Reliability = Literal["high", "medium", "low", "insufficient"]
 RegimeVerdict = Literal[
     "favorable for long swings",
     "neutral",
@@ -212,6 +213,50 @@ class Verdict(BaseModel):
         description="Points subtracted from the headline score because of high correlation with higher-scoring trades in the same dashboard run.",
     )
 
+    # ---- Sample-size reliability (added by apply_sample_size_adjustment) ----
+    reliability: Reliability = Field(
+        default="insufficient",
+        description="Reliability tier of the historical stats backing this verdict, derived from the sample size.",
+    )
+    confidence_adjusted_for_sample: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=100.0,
+        description=(
+            "Headline score multiplicatively shrunk by sqrt(min(n, 30) / 30) to reflect "
+            "how much we should trust it given the historical sample size. New field "
+            "(separate from `score`) for back-compat."
+        ),
+    )
+    historical_stats_display: HistoricalStatsDisplay | None = Field(
+        default=None,
+        description="Ready-to-render struct describing how to display the historical stats.",
+    )
+
+
+class HistoricalStatsDisplay(BaseModel):
+    """Frontend-ready presentation of the historical-stats block.
+
+    The frontend just renders ``display_text``; ``show_win_rate`` is a hint
+    for whether to allow the win-rate-styled emphasis at all.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    tier: Reliability = Field(..., description="Reliability tier (high/medium/low/insufficient).")
+    sample_size: int = Field(..., ge=0, description="Number of historical occurrences (n).")
+    show_win_rate: bool = Field(
+        ...,
+        description="True when the sample is large enough to display the win rate at all (n >= 10).",
+    )
+    display_text: str = Field(
+        ...,
+        description=(
+            "Verbatim string for the UI. For tier='insufficient' this is the literal "
+            "'Insufficient historical sample (n=X)'."
+        ),
+    )
+
 
 # ---------------------------------------------------------------------------
 # Conservative-mode filter shapes
@@ -257,3 +302,7 @@ class ConservativeFilterResult(BaseModel):
     passed: list[Verdict] = Field(default_factory=list)
     marginal: list[MarginalVerdict] = Field(default_factory=list)
     filtered_out: list[FilteredVerdict] = Field(default_factory=list)
+
+
+# Resolve forward reference for HistoricalStatsDisplay used inside Verdict.
+Verdict.model_rebuild()

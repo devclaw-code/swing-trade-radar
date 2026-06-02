@@ -1,7 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import type { EvidenceItem, RiskTier, ScoreBreakdown, Verdict, VerdictKind } from "@/lib/api";
+import type {
+  EvidenceItem,
+  HistoricalStatsDisplay,
+  Reliability,
+  RiskTier,
+  ScoreBreakdown,
+  Verdict,
+  VerdictKind,
+} from "@/lib/api";
 import { SanityDot } from "./SanityBanner";
 import { Sparkline } from "./Sparkline";
 
@@ -17,6 +25,46 @@ const riskBadge: Record<RiskTier, string> = {
   MEDIUM: "bg-amber-500/15 text-amber-300 border-amber-500/50",
   HIGH: "bg-rose-500/15 text-rose-300 border-rose-500/50",
 };
+
+const reliabilityBadge: Record<Reliability, string> = {
+  high: "bg-emerald-500/15 text-emerald-300 border-emerald-500/50",
+  medium: "bg-amber-500/15 text-amber-300 border-amber-500/50",
+  low: "bg-orange-500/15 text-orange-300 border-orange-500/50",
+  insufficient: "bg-slate-700/40 text-slate-400 border-slate-600/60",
+};
+
+const reliabilityLabel: Record<Reliability, string> = {
+  high: "High reliability",
+  medium: "Medium reliability",
+  low: "Low reliability",
+  insufficient: "Insufficient sample",
+};
+
+function ReliabilityBadge({
+  display,
+  prominent,
+}: {
+  display: HistoricalStatsDisplay;
+  prominent: boolean;
+}) {
+  const tone = reliabilityBadge[display.tier];
+  const label = reliabilityLabel[display.tier];
+  const sizing = prominent
+    ? "px-2.5 py-1 text-xs"
+    : "px-2 py-0.5 text-[10px] sm:text-[11px]";
+  const title =
+    display.tier === "insufficient"
+      ? `Only ${display.sample_size} historical occurrences — too few to draw conclusions`
+      : `Based on ${display.sample_size} historical occurrences`;
+  return (
+    <span
+      className={`rounded-md border font-semibold uppercase tracking-wide ${tone} ${sizing}`}
+      title={title}
+    >
+      {label}
+    </span>
+  );
+}
 
 function fmt(n: number, d = 2) {
   return n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -232,6 +280,9 @@ export function VerdictCard({ v, defaultExpanded = false }: { v: Verdict; defaul
           )}
         </div>
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          {v.historical_stats_display && (
+            <ReliabilityBadge display={v.historical_stats_display} prominent={expanded} />
+          )}
           <span
             className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase sm:text-[11px] ${riskBadge[v.risk_tier]}`}
           >
@@ -362,25 +413,66 @@ export function VerdictCard({ v, defaultExpanded = false }: { v: Verdict; defaul
 
           {v.why.historical_base_rate && (
             <Section title="Historical base rate" defaultOpen={expanded}>
-              <p className="text-sm text-slate-200">
-                On <span className="font-mono text-slate-50">{v.ticker}</span>, this setup occurred{" "}
-                <span className="font-semibold text-slate-50">
-                  {v.why.historical_base_rate.occurrences}
-                </span>{" "}
-                times. Win rate{" "}
-                <span className="font-semibold text-emerald-300">
-                  {(v.why.historical_base_rate.win_rate * 100).toFixed(0)}%
+              {v.historical_stats_display?.tier === "insufficient" ? (
+                <p className="text-sm">
+                  <span className="inline-flex items-center gap-1 rounded-md border border-slate-600/60 bg-slate-700/40 px-2 py-0.5 text-xs text-slate-400">
+                    {v.historical_stats_display.display_text}
+                  </span>
+                  <span className="ml-2 text-xs text-slate-500">
+                    Win rate hidden — too few prior occurrences to be meaningful.
+                  </span>
+                </p>
+              ) : v.historical_stats_display?.tier === "low" ? (
+                <p className="text-xs leading-snug text-slate-400">
+                  <span className="text-amber-400" title="Based on a small historical sample">⚠</span>{" "}
+                  On <span className="font-mono text-slate-300">{v.ticker}</span>, this setup occurred{" "}
+                  <span className="font-semibold text-slate-300">
+                    {v.why.historical_base_rate.occurrences}
+                  </span>{" "}
+                  times. Win rate{" "}
+                  <span
+                    className="font-semibold text-slate-300"
+                    title={`Based on only ${v.why.historical_base_rate.occurrences} historical occurrences`}
+                  >
+                    {(v.why.historical_base_rate.win_rate * 100).toFixed(0)}%
+                  </span>
+                  . Avg R ={" "}
+                  <span className="font-mono font-semibold text-slate-300">
+                    {v.why.historical_base_rate.avg_r >= 0 ? "+" : ""}
+                    {v.why.historical_base_rate.avg_r.toFixed(2)}
+                  </span>
+                  . Median hold {v.why.historical_base_rate.median_hold} days.
+                </p>
+              ) : (
+                <p className="text-sm text-slate-200">
+                  On <span className="font-mono text-slate-50">{v.ticker}</span>, this setup occurred{" "}
+                  <span className="font-semibold text-slate-50">
+                    {v.why.historical_base_rate.occurrences}
+                  </span>{" "}
+                  times. Win rate{" "}
+                  <span className="font-semibold text-emerald-300">
+                    {(v.why.historical_base_rate.win_rate * 100).toFixed(0)}%
+                  </span>
+                  . Avg R ={" "}
+                  <span
+                    className={`font-mono font-semibold ${
+                      v.why.historical_base_rate.avg_r >= 0 ? "text-emerald-300" : "text-rose-300"
+                    }`}
+                  >
+                    {v.why.historical_base_rate.avg_r >= 0 ? "+" : ""}
+                    {v.why.historical_base_rate.avg_r.toFixed(2)}
+                  </span>
+                  . Median hold {v.why.historical_base_rate.median_hold} days.
+                </p>
+              )}
+            </Section>
+          )}
+          {!v.why.historical_base_rate && v.historical_stats_display?.tier === "insufficient" && (
+            <Section title="Historical base rate" defaultOpen={expanded}>
+              <p className="text-sm">
+                <span className="inline-flex items-center gap-1 rounded-md border border-slate-600/60 bg-slate-700/40 px-2 py-0.5 text-xs text-slate-400">
+                  {v.historical_stats_display.display_text}
                 </span>
-                . Avg R ={" "}
-                <span
-                  className={`font-mono font-semibold ${
-                    v.why.historical_base_rate.avg_r >= 0 ? "text-emerald-300" : "text-rose-300"
-                  }`}
-                >
-                  {v.why.historical_base_rate.avg_r >= 0 ? "+" : ""}
-                  {v.why.historical_base_rate.avg_r.toFixed(2)}
-                </span>
-                . Median hold {v.why.historical_base_rate.median_hold} days.
               </p>
             </Section>
           )}

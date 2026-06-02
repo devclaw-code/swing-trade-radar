@@ -63,6 +63,15 @@ export interface WhyBlock {
   doc_refs: string[];
 }
 
+export type Reliability = "high" | "medium" | "low" | "insufficient";
+
+export interface HistoricalStatsDisplay {
+  tier: Reliability;
+  sample_size: number;
+  show_win_rate: boolean;
+  display_text: string;
+}
+
 export interface Verdict {
   ticker: string;
   as_of: string;
@@ -86,6 +95,9 @@ export interface Verdict {
   score?: number | null;
   score_breakdown?: ScoreBreakdown | null;
   correlation_penalty?: number;
+  reliability?: Reliability;
+  confidence_adjusted_for_sample?: number | null;
+  historical_stats_display?: HistoricalStatsDisplay | null;
 }
 
 export interface ScoreComponent {

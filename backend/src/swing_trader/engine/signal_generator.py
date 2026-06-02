@@ -33,6 +33,7 @@ from .base_rate import compute_base_rate
 from .indicators import enrich
 from .regime import compute_regime, offline_default
 from .risk_classifier import ClassifiedSignal, classify
+from .sample_size import apply_sample_size_adjustment
 from .scoring import apply_correlation_penalties
 from .verdict import attach_score_breakdown, synthesize_verdict
 
@@ -458,6 +459,16 @@ def generate_verdicts(
         )
     except Exception as e:
         log.warning("correlation post-pass failed: %s", e)
+
+    # ---- Sample-size reliability post-pass --------------------------------
+    # Run AFTER scoring + correlation so `confidence_adjusted_for_sample`
+    # reflects the *final* score, not an intermediate one. This is also
+    # idempotent (see engine.sample_size).
+    for v in verdicts:
+        try:
+            apply_sample_size_adjustment(v)
+        except Exception as e:
+            log.warning("sample-size post-pass failed for %s: %s", v.ticker, e)
 
     n_persisted = _persist_verdicts(verdicts) if persist else 0
     finished = datetime.now(UTC).replace(tzinfo=None)
