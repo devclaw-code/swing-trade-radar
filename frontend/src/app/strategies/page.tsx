@@ -119,9 +119,9 @@ export default async function StrategiesPage() {
 
               {s3NegativeSharpe && (
                 <p className="mt-3 rounded-md border border-amber-500/50 bg-amber-950/50 px-3 py-2 text-xs leading-relaxed text-amber-200">
-                  ⚠ {s.id} currently shows a negative Sharpe in backtesting. Live signals are
-                  still generated but should be treated with extra caution — a strategy review is
-                  in progress.
+                  ⚠ {s.id} currently shows a negative Sharpe in backtesting. Live signals are still
+                  generated but should be treated with extra caution — a strategy review is in
+                  progress.
                 </p>
               )}
             </article>
