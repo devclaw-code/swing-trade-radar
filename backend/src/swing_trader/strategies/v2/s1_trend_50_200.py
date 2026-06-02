@@ -19,6 +19,7 @@ from typing import ClassVar
 
 import pandas as pd
 
+from ...engine.risk_levels import atr_stop, min_rr_target
 from ...schemas import EvidenceItem
 from .base import StrategyResult, V2Strategy
 
@@ -98,8 +99,8 @@ class TrendFiftyTwoHundredStrategy(V2Strategy):
             score = passed_count / 3.0
 
         entry = close
-        stop = round(close - 2.0 * atr, 2) if atr == atr else round(close * 0.95, 2)
-        target = round(close + 4.0 * atr, 2) if atr == atr else round(close * 1.10, 2)
+        stop = atr_stop(entry, atr, mult=2.0)
+        target = min_rr_target(entry, stop, rr=2.5)
 
         invalidation = [
             f"Close below SMA200 ({sma200:.2f})",

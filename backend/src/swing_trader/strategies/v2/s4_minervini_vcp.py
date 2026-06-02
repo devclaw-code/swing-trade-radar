@@ -21,6 +21,7 @@ from typing import ClassVar
 
 import pandas as pd
 
+from ...engine.risk_levels import floor_stop_with_atr
 from ...schemas import EvidenceItem
 from .base import StrategyResult, V2Strategy
 
@@ -141,7 +142,8 @@ class MinerviniVcpStrategy(V2Strategy):
         # Trade plan
         # Stop just below 20-day low; target = entry + 1.5x box height.
         recent_low = float(df["low"].iloc[-20:].min())
-        stop = round(recent_low * 0.99, 2)
+        # Pivot stop, but never tighter than 2x ATR (esp. on high-vol names).
+        stop = floor_stop_with_atr(close, recent_low * 0.99, atr_now, mult=2.0, direction="LONG")
         risk = max(0.01, close - stop)
         target = round(close + 2.0 * risk, 2)
 

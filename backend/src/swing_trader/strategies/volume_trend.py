@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import pandas as pd
 
+from ..engine.risk_levels import floor_stop_with_atr, min_rr_target
 from .base_strategy import BaseStrategy, Signal
 
 
@@ -57,10 +58,14 @@ class VolumeTrendStrategy(BaseStrategy):
             return []
 
         entry = close_t
-        stop = float(df["low"].tail(5).min())
+        struct_stop = float(df["low"].tail(5).min())
+        stop = floor_stop_with_atr(
+            entry, struct_stop, last.get("atr14"), mult=2.0, direction="LONG"
+        )
         if stop >= entry:
             return []
-        target = entry + 1.5 * (entry - stop)
+        # Honor the 1:2.5 min-RR rule (was 1.5R).
+        target = min_rr_target(entry, stop, rr=2.5)
 
         vol_ratio = vol_t / vol_sma20_t if vol_sma20_t > 0 else 0.0
         confirmations = [

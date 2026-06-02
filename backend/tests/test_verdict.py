@@ -22,7 +22,7 @@ def _mk_result(name: str, *, fired: bool, score: float, **kw) -> StrategyResult:
         headline=f"{name} headline",
         entry_price=kw.get("entry", 100.0),
         stop_price=kw.get("stop", 95.0),
-        target_price=kw.get("target", 110.0),
+        target_price=kw.get("target", 115.0),  # RR 3.0 — above the 2.5 min-quality gate
         max_hold_days=kw.get("max_hold", 10),
         risk_tier=kw.get("risk_tier", "MEDIUM"),
     )
@@ -43,9 +43,40 @@ def test_buy_when_high_conviction_and_favourable_regime():
     assert "S3_connors_rsi2" in v.supporting_setups
     assert v.entry_zone is not None and v.entry_zone.price == 100.0
     assert v.stop_loss is not None and v.target is not None
-    assert v.target.rr == 2.0
+    assert v.target.rr == 3.0  # fixture target 115 / stop 95 -> RR 3.0
     assert "shares" in v.position_size_hint
     assert v.conviction > 0.6
+
+
+def test_subthreshold_rr_is_discarded_even_at_high_conviction():
+    # Entry 100 / stop 95 / target 108 -> RR = 8/5 = 1.6 < 2.5 min gate.
+    primary = _mk_result(
+        "S1_trend_50_200", fired=True, score=0.95, entry=100.0, stop=95.0, target=108.0
+    )
+    other = _mk_result("S3_connors_rsi2", fired=True, score=0.80)
+    v = synthesize_verdict(
+        ticker="NVDA",
+        as_of=date(2026, 5, 30),
+        strategy_results=[primary, other],
+        regime=offline_default(),
+    )
+    assert v.verdict == "NO_SETUP"
+
+
+def test_threshold_rr_passes_gate():
+    # RR exactly 2.5 (stop 95, target 112.5) must NOT be discarded by the gate.
+    primary = _mk_result(
+        "S1_trend_50_200", fired=True, score=0.95, entry=100.0, stop=95.0, target=112.5
+    )
+    v = synthesize_verdict(
+        ticker="NVDA",
+        as_of=date(2026, 5, 30),
+        strategy_results=[primary],
+        regime=offline_default(),
+    )
+    assert v.verdict in ("BUY", "WATCH")
+    assert v.primary_setup == "S1_trend_50_200"
+    assert v.stop_loss is not None and v.target is not None
 
 
 def test_no_setup_when_nothing_fires():

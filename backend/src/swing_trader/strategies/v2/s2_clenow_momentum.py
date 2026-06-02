@@ -27,6 +27,7 @@ import numpy as np
 import pandas as pd
 import scipy.stats as sps
 
+from ...engine.risk_levels import atr_stop, min_rr_target
 from ...schemas import EvidenceItem
 from .base import StrategyResult, V2Strategy
 
@@ -157,8 +158,10 @@ class ClenowMomentumStrategy(V2Strategy):
         ]
 
         atr = float(last.get("atr14", float("nan")))
-        stop = round(close - 2.5 * atr, 2) if atr == atr else round(close * 0.92, 2)
-        target = round(close * 1.20, 2)  # momentum runs are open-ended; 20% chunk
+        stop = atr_stop(close, atr, mult=2.5)  # Clenow-style wider trend stop
+        # Momentum runs are open-ended: take the further of a 20% chunk or the
+        # min-RR target, so a tight ATR stop still yields a >=2.5R objective.
+        target = max(round(close * 1.20, 2), min_rr_target(close, stop, rr=2.5))
 
         invalidation = [
             "Drops out of top quintile on weekly re-rank",

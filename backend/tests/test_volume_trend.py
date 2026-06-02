@@ -62,9 +62,9 @@ def test_volume_trend_long_signal_fires():
     assert s.strategy == "volume_trend"
     assert s.entry > s.stop
     assert s.target > s.entry
-    # 1.5R target sanity check.
+    # 2.5R target (min-RR rule); helper rounds to 2dp so allow a cent of slack.
     risk = s.entry - s.stop
-    assert abs((s.target - s.entry) - 1.5 * risk) < 1e-6
+    assert abs((s.target - s.entry) - 2.5 * risk) < 0.01
     assert 0.7 <= s.confidence <= 0.9
     assert len(s.confirmations) >= 3
 
