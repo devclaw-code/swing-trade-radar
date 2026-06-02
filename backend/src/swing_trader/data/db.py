@@ -140,6 +140,31 @@ class Backtest(Base):
     ran_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
 
 
+class BacktestV2Row(Base):
+    """Walk-forward (out-of-sample) backtest summary for a v2 strategy.
+
+    One row per strategy: trades are pooled across the whole universe. Includes
+    the Deflated Sharpe Ratio and the deploy-gate flag.
+    """
+
+    __tablename__ = "backtests_v2"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    strategy: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    period_start: Mapped[date] = mapped_column(Date)
+    period_end: Mapped[date] = mapped_column(Date)
+    n_trades: Mapped[int] = mapped_column(Integer)
+    n_tickers: Mapped[int] = mapped_column(Integer, default=0)
+    win_rate: Mapped[float] = mapped_column(Float)
+    avg_r: Mapped[float] = mapped_column(Float)
+    profit_factor: Mapped[float] = mapped_column(Float)
+    max_dd_r: Mapped[float] = mapped_column(Float)
+    sharpe: Mapped[float] = mapped_column(Float)
+    deflated_sharpe: Mapped[float] = mapped_column(Float, default=0.0)
+    passes_gate: Mapped[bool] = mapped_column(default=False)
+    avg_hold_bars: Mapped[float] = mapped_column(Float)
+    ran_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+
 # --- Engine + session --------------------------------------------------------
 
 engine = create_engine(

@@ -47,7 +47,10 @@ class Settings(BaseSettings):
     alpha_vantage_api_key: str | None = None
     fred_api_key: str | None = None
     finnhub_api_key: str | None = None
-    price_history_days: int = 250
+    # ~6 years so the walk-forward backtester (backtester_v2) gets many OOS folds.
+    # The verdict engine only ever looks at the last bar, so the extra history is
+    # essentially free for daily generation and only matters for backtests.
+    price_history_days: int = 2200
     yfinance_request_timeout: float = 20.0
 
     # --- Calendars (macro + earnings) -------------------------------------
