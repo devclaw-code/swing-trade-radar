@@ -83,7 +83,19 @@ class TrendFiftyTwoHundredStrategy(V2Strategy):
 
         passed_count = sum(1 for c in (c1, c2, c3) if c)
         fired = passed_count == 3
-        score = passed_count / 3.0
+
+        # Continuous score (only when fired): magnitude of trend, not just boolean pass.
+        if fired:
+            # ATR-normalized extension above SMA50 (cap 8 ATRs => 1.0; "genuinely extended")
+            ext = (close - sma50) / atr if atr == atr and atr > 0 else 0.0
+            ext_part = max(0.0, min(1.0, ext / 8.0))
+            # Percentage gap of SMA50 above SMA200 (cap 20% => 1.0; deeply established uptrend)
+            gap_pct = (sma50 - sma200) / sma200 if sma200 > 0 else 0.0
+            gap_part = max(0.0, min(1.0, gap_pct / 0.20))
+            # Floor 0.4 (we passed all three legs), then weighted strength.
+            score = round(0.4 + 0.35 * ext_part + 0.25 * gap_part, 4)
+        else:
+            score = passed_count / 3.0
 
         entry = close
         stop = round(close - 2.0 * atr, 2) if atr == atr else round(close * 0.95, 2)

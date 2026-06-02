@@ -47,7 +47,7 @@ function ConvictionBar({ value }: { value: number }) {
 function EvidenceRow({ e }: { e: EvidenceItem }) {
   const widthPct = Math.round(Math.min(1, Math.max(0, e.weight)) * 100);
   return (
-    <li className="grid grid-cols-[minmax(0,1fr)_80px_minmax(0,1fr)] items-center gap-3 py-1.5">
+    <li className="grid grid-cols-1 gap-1 py-1.5 sm:grid-cols-[minmax(0,1fr)_80px_minmax(0,1fr)] sm:items-center sm:gap-3">
       <div className="flex items-center gap-2 text-sm">
         <span
           className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
@@ -61,7 +61,7 @@ function EvidenceRow({ e }: { e: EvidenceItem }) {
         {e.value && <span className="font-mono text-xs text-slate-400">{e.value}</span>}
       </div>
       <div
-        className="h-1.5 overflow-hidden rounded-full bg-slate-800"
+        className="hidden h-1.5 overflow-hidden rounded-full bg-slate-800 sm:block"
         title={`weight ${widthPct}%`}
       >
         <div
@@ -69,7 +69,7 @@ function EvidenceRow({ e }: { e: EvidenceItem }) {
           style={{ width: `${widthPct}%` }}
         />
       </div>
-      <div className="text-xs text-slate-400">{e.note}</div>
+      <div className="pl-6 text-xs text-slate-400 sm:pl-0">{e.note}</div>
     </li>
   );
 }
@@ -134,16 +134,16 @@ export function VerdictCard({ v, defaultExpanded = false }: { v: Verdict; defaul
       }`}
     >
       {/* Header */}
-      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-700/60 px-5 py-4">
-        <div className="flex items-baseline gap-3">
+      <header className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-700/60 px-3 py-3 sm:gap-3 sm:px-5 sm:py-4">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <Link
             href={`/ticker/${v.ticker}`}
-            className="text-xl font-bold tracking-tight text-slate-50 hover:text-sky-300"
+            className="text-lg font-bold tracking-tight text-slate-50 hover:text-sky-300 sm:text-xl"
           >
             {v.ticker}
           </Link>
           {typeof v.price === "number" && (
-            <span className="font-mono text-base text-slate-100">${fmt(v.price)}</span>
+            <span className="font-mono text-sm text-slate-100 sm:text-base">${fmt(v.price)}</span>
           )}
           {typeof v.day_change_pct === "number" && (
             <span
@@ -155,14 +155,14 @@ export function VerdictCard({ v, defaultExpanded = false }: { v: Verdict; defaul
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <span
-            className={`rounded-md border px-2 py-0.5 text-[11px] font-semibold uppercase ${riskBadge[v.risk_tier]}`}
+            className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase sm:text-[11px] ${riskBadge[v.risk_tier]}`}
           >
             {v.risk_tier}
           </span>
           <span
-            className={`rounded-md border px-2.5 py-1 text-xs font-bold uppercase tracking-wide ${verdictBadge[v.verdict]}`}
+            className={`rounded-md border px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide sm:px-2.5 sm:py-1 sm:text-xs ${verdictBadge[v.verdict]}`}
           >
             {v.verdict.replace("_", " ")}
           </span>
@@ -170,7 +170,7 @@ export function VerdictCard({ v, defaultExpanded = false }: { v: Verdict; defaul
       </header>
 
       {/* Body */}
-      <div className="flex-1 space-y-3 px-5 py-4">
+      <div className="flex-1 space-y-3 px-3 py-3 sm:px-5 sm:py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="text-xs text-slate-400">
             {v.primary_setup ? (
@@ -195,7 +195,7 @@ export function VerdictCard({ v, defaultExpanded = false }: { v: Verdict; defaul
 
         {/* Trade params */}
         {(v.entry_zone || v.stop_loss || v.target) && (
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-xs sm:grid-cols-5">
+          <div className="grid grid-cols-3 gap-x-3 gap-y-2 rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-xs sm:grid-cols-5 sm:gap-x-4">
             <div>
               <div className="text-[10px] uppercase text-slate-500">Entry</div>
               <div className="font-mono text-slate-100">
@@ -216,6 +216,11 @@ export function VerdictCard({ v, defaultExpanded = false }: { v: Verdict; defaul
               <div className="font-mono text-emerald-300">
                 {v.target ? `$${fmt(v.target.price)}` : "—"}
               </div>
+              {v.target && v.entry_zone && v.entry_zone.price > 0 && (
+                <div className="text-[10px] text-emerald-400/80">
+                  +{(((v.target.price - v.entry_zone.price) / v.entry_zone.price) * 100).toFixed(1)}%
+                </div>
+              )}
             </div>
             <div>
               <div className="text-[10px] uppercase text-slate-500">R:R</div>
@@ -304,7 +309,7 @@ export function VerdictCard({ v, defaultExpanded = false }: { v: Verdict; defaul
 
       {/* Footer doc refs */}
       {v.why.doc_refs.length > 0 && (
-        <footer className="border-t border-slate-700/60 px-5 py-2 text-[11px] text-slate-500">
+        <footer className="border-t border-slate-700/60 px-3 py-2 text-[11px] text-slate-500 sm:px-5">
           <span className="uppercase tracking-wide">Refs: </span>
           {v.why.doc_refs.map((d, i) => (
             <span key={d}>

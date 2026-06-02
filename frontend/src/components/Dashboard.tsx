@@ -92,8 +92,8 @@ export function Dashboard({ initialVerdicts, initialRegime, initialUpdated }: Pr
       <RegimeCard regime={regime} asOf={asOf} />
 
       {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-700/60 bg-slate-900 p-3">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-2 rounded-lg border border-slate-700/60 bg-slate-900 p-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:p-3">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Verdict</span>
           {(
             [
@@ -114,7 +114,7 @@ export function Dashboard({ initialVerdicts, initialRegime, initialUpdated }: Pr
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Risk</span>
           {(["all", "LOW", "MEDIUM", "HIGH"] as const).map((r) => (
             <button
@@ -128,8 +128,8 @@ export function Dashboard({ initialVerdicts, initialRegime, initialUpdated }: Pr
           ))}
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
-          <label htmlFor="ticker-search" className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+        <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
+          <label htmlFor="ticker-search" className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
             Ticker
           </label>
           <input
@@ -138,7 +138,7 @@ export function Dashboard({ initialVerdicts, initialRegime, initialUpdated }: Pr
             placeholder="NVDA…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-32 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-xs uppercase text-slate-100 placeholder:text-slate-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+            className="flex-1 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-xs uppercase text-slate-100 placeholder:text-slate-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 sm:w-32 sm:flex-none"
           />
         </div>
       </div>
@@ -149,7 +149,7 @@ export function Dashboard({ initialVerdicts, initialRegime, initialUpdated }: Pr
           No verdicts match the current filters.
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:gap-5 lg:grid-cols-2 xl:grid-cols-3">
           {sorted.map((v) => (
             <VerdictCard key={v.ticker} v={v} />
           ))}

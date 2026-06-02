@@ -50,6 +50,17 @@ class RegimeContext(BaseModel):
     as_of: _date | None = None
 
 
+class BaseRateBlock(BaseModel):
+    """Structured historical base-rate stats for a (ticker, setup) pair."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    occurrences: int = Field(..., ge=0)
+    win_rate: float = Field(..., ge=0.0, le=1.0)
+    avg_r: float
+    median_hold: float = Field(..., ge=0.0, description="Median hold in bars.")
+
+
 class WhyBlock(BaseModel):
     """The structured explanation that powers the UI 'why' panel."""
 
@@ -57,9 +68,9 @@ class WhyBlock(BaseModel):
 
     headline: str
     evidence: list[EvidenceItem] = Field(default_factory=list)
-    historical_base_rate: str = Field(
-        default="",
-        description="Human-readable base-rate string, e.g. '87 occurrences, 68% win rate, +0.83R avg'.",
+    historical_base_rate: BaseRateBlock | None = Field(
+        default=None,
+        description="Structured base-rate stats; null when no prior occurrences are available.",
     )
     what_could_invalidate: list[str] = Field(default_factory=list)
     counter_arguments: list[str] = Field(default_factory=list)
@@ -103,3 +114,14 @@ class Verdict(BaseModel):
     regime_context: RegimeContext
     why: WhyBlock
     risk_tier: RiskTier = "MEDIUM"
+
+    # Optional latest-bar enrichment for the UI header.
+    price: float | None = Field(default=None, description="Latest close used for this verdict.")
+    day_change_pct: float | None = Field(
+        default=None,
+        description="Fraction (e.g. 0.012 = +1.2%) day-over-day change for the latest bar.",
+    )
+    sparkline: list[float] | None = Field(
+        default=None,
+        description="Recent close prices (oldest → newest), ~60 bars, for sparkline rendering.",
+    )

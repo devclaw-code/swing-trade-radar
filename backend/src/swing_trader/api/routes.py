@@ -64,17 +64,44 @@ def strategies(
     from ..strategies.v2.base import V2Strategy
     from ..engine.signal_generator import default_v2_strategies
 
+    descriptions: dict[str, str] = {
+        "S1_trend_50_200": (
+            "Classic trend-following: long when price is above the 50-day SMA and the 50-day "
+            "is above the 200-day (golden cross intact). Enters on next-day open, ATR-based stop and target."
+        ),
+        "S2_clenow_momentum": (
+            "Andreas Clenow style momentum: rank the basket by 90-day exponential-regression slope "
+            "x R-squared; only top-decile names with low volatility and trend filter qualify."
+        ),
+        "S3_connors_rsi2": (
+            "Larry Connors mean-reversion: 2-period RSI < 10 while price is above its 200-SMA, in a "
+            "healthy VIX regime, with no earnings inside the hold window."
+        ),
+        "S4_minervini_vcp": (
+            "Mark Minervini's VCP / Stage 2 trend template: tightening price contractions on "
+            "declining volume, breakout above pivot with relative strength vs. the index."
+        ),
+        "S5_pead": (
+            "Post-earnings announcement drift: ride the multi-week drift after a positive earnings "
+            "surprise; gated by gap, volume, and surprise magnitude thresholds."
+        ),
+    }
+
     strats: list[V2Strategy] = default_v2_strategies()
     info = []
     for s in strats:
+        # Derive a short id like "S1" from "S1_trend_50_200"
+        short_id = s.name.split("_", 1)[0] if "_" in s.name else s.name
         info.append(
             {
+                "id": short_id,
                 "name": s.name,
+                "description": descriptions.get(s.name, ""),
                 "risk_tier": s.risk_tier,
                 "doc_refs": list(s.doc_refs),
                 "counter_argument_keys": list(s.counter_argument_keys),
                 # TODO(devclaw): wire walk-forward backtest stats per strategy.
-                "backtest": {"sharpe": None, "deflated_sharpe": None, "win_rate": None},
+                "backtest": None,
             }
         )
     return {"count": len(info), "strategies": info}

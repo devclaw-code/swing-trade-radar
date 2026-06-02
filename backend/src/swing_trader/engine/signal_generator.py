@@ -26,7 +26,7 @@ from ..strategies.v2.s2_clenow_momentum import ClenowMomentumStrategy, compute_b
 from ..strategies.v2.s3_connors_rsi2 import ConnorsRsi2Strategy
 from ..strategies.v2.s4_minervini_vcp import MinerviniVcpStrategy
 from ..strategies.v2.s5_pead import PeadStrategy
-from .base_rate import compute_base_rate, format_base_rate
+from .base_rate import compute_base_rate
 from .indicators import enrich
 from .regime import compute_regime, offline_default
 from .risk_classifier import ClassifiedSignal, classify
@@ -292,9 +292,10 @@ def generate_verdicts(
     started = datetime.now(UTC).replace(tzinfo=None)
     strategies = default_v2_strategies()
 
-    # 1. Load + enrich each ticker
+    # 1. Load + enrich each ticker (universe + macro index ETFs for regime checks)
+    macro_tickers = ("SPY", "QQQ")
     enriched: dict[str, pd.DataFrame] = {}
-    for t in settings.tickers:
+    for t in list(settings.tickers) + list(macro_tickers):
         try:
             df = load_ohlcv(t)
             if df.empty:
@@ -313,8 +314,8 @@ def generate_verdicts(
             log.warning("regime fetch failed, using offline default: %s", e)
             regime = offline_default()
 
-    # 3. Earnings — fetched once per ticker (best-effort)
-    earnings_map = {t: _try_fetch_earnings(t) for t in enriched}
+    # 3. Earnings — fetched once per ticker (best-effort, skip macro ETFs)
+    earnings_map = {t: _try_fetch_earnings(t) for t in enriched if t not in macro_tickers}
 
     basket = _build_basket(
         enriched_by_ticker=enriched,
@@ -322,10 +323,12 @@ def generate_verdicts(
         earnings=earnings_map,
     )
 
-    # 4. Per-ticker eval + synthesize
+    # 4. Per-ticker eval + synthesize (macro ETFs are basket context, not verdicts)
     verdicts: list[Verdict] = []
     errors = 0
     for ticker, df in enriched.items():
+        if ticker in macro_tickers:
+            continue
         try:
             results: list[StrategyResult] = []
             for strat in strategies:
@@ -342,26 +345,24 @@ def generate_verdicts(
             )
 
             def _make_lookup(_df=df, _ticker=ticker):
-                def _lookup(primary: StrategyResult) -> str:
+                def _lookup(primary: StrategyResult):
                     setup_id = primary.strategy_name
-
-                    def _sig(d, i):
-                        # Recompute the same evaluation predicate on a slice of the df
-                        # using strategies' own evaluate (slow but correct).
-                        # To keep this fast we approximate: use score>0.6 as 'fired-like'.
-                        # NOTE: this is an approximation; full reproducibility requires
-                        # each strategy to expose a row-level predicate. TODO(devclaw).
-                        return False
-
-                    # Very lightweight signature: use a fast, vectorisable proxy per strategy.
                     sig = _proxy_signature(setup_id)
                     if sig is None:
-                        return ""
+                        return None
                     stats = compute_base_rate(
                         _ticker, setup_id, sig, _df,
                         max_hold_days=primary.max_hold_days or 10,
                     )
-                    return format_base_rate(stats, _ticker, setup_id)
+                    if not stats or stats.get("occurrences", 0) == 0:
+                        return None
+                    from ..schemas import BaseRateBlock
+                    return BaseRateBlock(
+                        occurrences=int(stats["occurrences"]),
+                        win_rate=float(stats["win_rate"]),
+                        avg_r=float(stats["avg_r"]),
+                        median_hold=float(stats["median_hold"]),
+                    )
 
                 return _lookup
 
@@ -372,6 +373,22 @@ def generate_verdicts(
                 regime=regime,
                 base_rate_lookup=_make_lookup(),
             )
+
+            # Latest-bar enrichment for UI header.
+            try:
+                closes = df["close"].dropna()
+                if len(closes) >= 1:
+                    last_close = float(closes.iloc[-1])
+                    verdict.price = round(last_close, 4)
+                    if len(closes) >= 2:
+                        prev = float(closes.iloc[-2])
+                        if prev > 0:
+                            verdict.day_change_pct = round((last_close - prev) / prev, 6)
+                    tail = closes.tail(60).tolist()
+                    verdict.sparkline = [float(round(x, 4)) for x in tail]
+            except Exception as e:  # noqa: BLE001
+                log.warning("sparkline/price enrich failed for %s: %s", ticker, e)
+
             verdicts.append(verdict)
         except Exception as e:  # noqa: BLE001
             log.exception("verdict synth failed for %s: %s", ticker, e)

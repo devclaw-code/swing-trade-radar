@@ -29,6 +29,7 @@ from typing import Callable
 import yaml
 
 from ..schemas import (
+    BaseRateBlock,
     EvidenceItem,
     PriceLevel,
     RegimeContext,
@@ -111,7 +112,7 @@ def synthesize_verdict(
     as_of: date,
     strategy_results: list[StrategyResult],
     regime: RegimeContext,
-    base_rate_lookup: Callable[[StrategyResult], str] | None = None,
+    base_rate_lookup: Callable[[StrategyResult], BaseRateBlock | None] | None = None,
 ) -> Verdict:
     """Build a Verdict from the strategy results."""
     fired = [r for r in strategy_results if r.fired]
@@ -144,10 +145,10 @@ def synthesize_verdict(
             if ref not in doc_refs:
                 doc_refs.append(ref)
 
-    base_rate_str = ""
+    base_rate: BaseRateBlock | None = None
     if primary is not None and base_rate_lookup is not None:
         try:
-            base_rate_str = base_rate_lookup(primary)
+            base_rate = base_rate_lookup(primary)
         except Exception as e:  # noqa: BLE001
             log.warning("base_rate lookup failed for %s: %s", ticker, e)
 
@@ -166,7 +167,7 @@ def synthesize_verdict(
     why = WhyBlock(
         headline=headline,
         evidence=evidence,
-        historical_base_rate=base_rate_str,
+        historical_base_rate=base_rate,
         what_could_invalidate=invalidation,
         counter_arguments=counter_args,
         doc_refs=doc_refs,

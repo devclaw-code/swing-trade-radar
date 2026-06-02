@@ -105,9 +105,12 @@ def fetch_ticker(ticker: str, *, full_refresh: bool = False) -> int:
 
 
 def fetch_all() -> dict[str, int]:
-    """Fetch all configured tickers. Returns {ticker: rows_written}."""
+    """Fetch all configured tickers + macro index ETFs (SPY/QQQ) used for regime gates.
+    Returns {ticker: rows_written}.
+    """
+    macro = ("SPY", "QQQ")
     out: dict[str, int] = {}
-    for t in settings.tickers:
+    for t in list(settings.tickers) + list(macro):
         try:
             out[t] = fetch_ticker(t)
         except Exception as e:

@@ -128,7 +128,12 @@ class ConnorsRsi2Strategy(V2Strategy):
 
         passes = sum(1 for e in evidence if e.passed)
         fired = c_rsi and c_regime_ticker and c_vix and c_earn
-        score = passes / 4.0
+        if fired:
+            # Deeper RSI(2) = stronger mean-reversion edge. RSI 0 -> 1.0, RSI 10 -> 0.5
+            rsi_strength = max(0.0, min(1.0, (RSI_THRESHOLD - rsi2) / RSI_THRESHOLD))
+            score = round(0.5 + 0.5 * rsi_strength, 4)
+        else:
+            score = passes / 4.0
 
         # Trade plan — shorter hold (mean-reversion).
         stop = round(close - 2.0 * atr, 2) if atr == atr else round(close * 0.95, 2)
