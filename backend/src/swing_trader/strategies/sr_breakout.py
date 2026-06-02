@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pandas as pd
 
+from ..engine.risk_levels import floor_stop_with_atr
 from .base_strategy import BaseStrategy, Signal, default_target
 
 
@@ -39,7 +40,10 @@ class SrBreakoutStrategy(BaseStrategy):
         broke_down = entry < prev_pivot_low
 
         if broke_up and volume_ok:
-            stop = prev_pivot_high * 0.99
+            atr = last.get("atr14")
+            stop = floor_stop_with_atr(
+                entry, prev_pivot_high * 0.99, atr, mult=2.0, direction="LONG"
+            )
             if stop >= entry:
                 return []
             confirmations = [
@@ -63,7 +67,10 @@ class SrBreakoutStrategy(BaseStrategy):
                 )
             )
         elif broke_down and volume_ok:
-            stop = prev_pivot_low * 1.01
+            atr = last.get("atr14")
+            stop = floor_stop_with_atr(
+                entry, prev_pivot_low * 1.01, atr, mult=2.0, direction="SHORT"
+            )
             if stop <= entry:
                 return []
             confirmations = [

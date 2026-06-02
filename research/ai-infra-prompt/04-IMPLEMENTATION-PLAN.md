@@ -27,14 +27,14 @@ The synthesizer rule that consumes W1.
 - [x] W2.3 `WhyBlock.what_could_invalidate` — append macro/earnings exit reason
 - [x] W2.4 Tests: BUY suppression on CPI-eve, WATCH demotion, hold-clamp on earnings T-3, fail-open when calendar stale
 
-### W3 — Risk geometry hardening (independent, ship anytime)
+### W3 — Risk geometry hardening (DONE)
 Code-audit punch list section A — see `02-CODE-AUDIT.md` §6A.
 
-- [ ] W3.1 `engine/risk_levels.py` (`atr_stop`, `min_rr_target`, `PCT_FALLBACK`)
-- [ ] W3.2 Replace inline ATR-stops in v2 strategies (S1, S2, S3)
-- [ ] W3.3 Wrap structure stops with ATR floor in S4, sr_breakout, macd_trend, volume_trend
-- [ ] W3.4 Hard `verdict_min_rr=2.5` discard in `_verdict_kind`
-- [ ] W3.5 Tests incl. AAOI-class high-vol fixture
+- [x] W3.1 `engine/risk_levels.py` (`atr_stop`, `floor_stop_with_atr`, `min_rr_target`, `reward_risk`, `PCT_FALLBACK`, `MIN_RR`)
+- [x] W3.2 Replace inline ATR-stops in v2 strategies (S1, S2, S3)
+- [x] W3.3 Wrap structure stops with ATR floor in S4, sr_breakout, macd_trend, volume_trend (direction-aware)
+- [x] W3.4 Hard `MIN_RR=2.5` discard in `_verdict_kind`; fixed lying `StopLevel.method` string; volume_trend target 1.5R→2.5R
+- [x] W3.5 Tests: `test_risk_levels.py` (incl. AAOI-class high-vol floor), RR-discard verdict tests — 152 pass
 
 ### W4 — RSI(14) > 75 / StochRSI overbought reject
 - [ ] W4.1 Add StochRSI to `indicators.enrich()`

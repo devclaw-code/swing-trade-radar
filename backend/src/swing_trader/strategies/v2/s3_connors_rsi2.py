@@ -26,6 +26,7 @@ from typing import ClassVar
 import pandas as pd
 import pandas_ta_classic as ta
 
+from ...engine.risk_levels import atr_stop
 from ...schemas import EvidenceItem
 from .base import StrategyResult, V2Strategy
 
@@ -136,7 +137,7 @@ class ConnorsRsi2Strategy(V2Strategy):
             score = passes / 4.0
 
         # Trade plan — shorter hold (mean-reversion).
-        stop = round(close - 2.0 * atr, 2) if atr == atr else round(close * 0.95, 2)
+        stop = atr_stop(close, atr, mult=2.0)
         # Target: revert to recent SMA(5) or +2R, whichever is higher.
         sma5 = float(df["close"].rolling(5).mean().iloc[-1])
         risk = max(0.01, close - stop)

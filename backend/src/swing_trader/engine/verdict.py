@@ -21,6 +21,7 @@ Rules:
 from __future__ import annotations
 
 import logging
+import math
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from functools import lru_cache
@@ -48,6 +49,7 @@ from .blackout import (
     is_blackout,
     next_earnings_for,
 )
+from .risk_levels import MIN_RR, reward_risk
 from .scoring import ScoringContext, compute_score_breakdown
 
 log = logging.getLogger(__name__)
@@ -97,6 +99,18 @@ def _verdict_kind(
         return "NO_SETUP"
     if regime.regime_verdict == "unfavorable / risk-off":
         return "AVOID"
+    # Hard risk-quality gate: a setup whose reward:risk is below the minimum is
+    # not tradeable regardless of conviction (Aditya's 1:2.5 rule).
+    if (
+        primary.entry_price is not None
+        and primary.stop_price is not None
+        and primary.target_price is not None
+    ):
+        rr = reward_risk(primary.entry_price, primary.stop_price, primary.target_price)
+        # NaN (from bad price data) must fail the gate; `NaN < MIN_RR` is False,
+        # so guard explicitly rather than letting non-comparable ratios bypass it.
+        if math.isnan(rr) or rr < MIN_RR:
+            return "NO_SETUP"
     if conviction > 0.6:
         return "BUY"
     if conviction >= 0.4:
@@ -238,7 +252,7 @@ def synthesize_verdict(
             ) if primary.entry_price else None
             stop_loss = StopLevel(
                 price=primary.stop_price,
-                method="2x ATR(14) below entry",
+                method="ATR-floored stop",
                 risk_pct=risk_pct,
             )
         if primary.target_price is not None and primary.stop_price is not None:

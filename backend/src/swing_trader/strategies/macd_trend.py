@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pandas as pd
 
+from ..engine.risk_levels import floor_stop_with_atr
 from .base_strategy import BaseStrategy, Signal, default_target
 
 
@@ -28,7 +29,10 @@ class MacdTrendStrategy(BaseStrategy):
         bar_date = last.name.date() if hasattr(last.name, "date") else last.name
 
         if cross_up and entry > float(last["sma200"]):
-            stop = float(df["low"].tail(10).min())
+            atr = float(last["atr14"])
+            stop = floor_stop_with_atr(
+                entry, float(df["low"].tail(10).min()), atr, mult=2.0, direction="LONG"
+            )
             if stop >= entry:
                 return []
             confirmations = [
@@ -51,7 +55,10 @@ class MacdTrendStrategy(BaseStrategy):
                 )
             )
         elif cross_down and entry < float(last["sma200"]):
-            stop = float(df["high"].tail(10).max())
+            atr = float(last["atr14"])
+            stop = floor_stop_with_atr(
+                entry, float(df["high"].tail(10).max()), atr, mult=2.0, direction="SHORT"
+            )
             if stop <= entry:
                 return []
             confirmations = [
