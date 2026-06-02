@@ -64,8 +64,8 @@ class VolumeTrendStrategy(BaseStrategy):
         )
         if stop >= entry:
             return []
-        # Honor the 1:2.5 min-RR rule (was 1.5R).
-        target = min_rr_target(entry, stop, rr=2.5)
+        # Honor the min-RR rule (was 1.5R); threshold lives in risk_levels.MIN_RR.
+        target = min_rr_target(entry, stop)
 
         vol_ratio = vol_t / vol_sma20_t if vol_sma20_t > 0 else 0.0
         confirmations = [

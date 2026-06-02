@@ -100,7 +100,7 @@ class TrendFiftyTwoHundredStrategy(V2Strategy):
 
         entry = close
         stop = atr_stop(entry, atr, mult=2.0)
-        target = min_rr_target(entry, stop, rr=2.5)
+        target = min_rr_target(entry, stop)
 
         invalidation = [
             f"Close below SMA200 ({sma200:.2f})",

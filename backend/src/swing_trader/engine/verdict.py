@@ -21,6 +21,7 @@ Rules:
 from __future__ import annotations
 
 import logging
+import math
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from functools import lru_cache
@@ -106,7 +107,9 @@ def _verdict_kind(
         and primary.target_price is not None
     ):
         rr = reward_risk(primary.entry_price, primary.stop_price, primary.target_price)
-        if rr < MIN_RR:
+        # NaN (from bad price data) must fail the gate; `NaN < MIN_RR` is False,
+        # so guard explicitly rather than letting non-comparable ratios bypass it.
+        if math.isnan(rr) or rr < MIN_RR:
             return "NO_SETUP"
     if conviction > 0.6:
         return "BUY"
@@ -249,7 +252,7 @@ def synthesize_verdict(
             ) if primary.entry_price else None
             stop_loss = StopLevel(
                 price=primary.stop_price,
-                method="ATR(14)-based stop (>= 2x ATR distance)",
+                method="ATR-floored stop",
                 risk_pct=risk_pct,
             )
         if primary.target_price is not None and primary.stop_price is not None:

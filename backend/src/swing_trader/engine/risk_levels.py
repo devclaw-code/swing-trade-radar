@@ -72,13 +72,28 @@ def min_rr_target(
     rr: float = MIN_RR,
     direction: Direction = "LONG",
 ) -> float:
-    """Target priced at `rr` x the actual stop distance."""
+    """Target priced at `rr` x the actual stop distance.
+
+    Rounds in the direction that *preserves* reward (up for LONG, down for SHORT)
+    so cent-rounding can never drop the realised reward:risk below `rr` — the
+    helper feeds the hard min-RR gate, so a 2.50R request must not become 2.49R.
+    """
     risk = abs(entry - stop)
-    return round(entry + rr * risk if direction == "LONG" else entry - rr * risk, 2)
+    raw = entry + rr * risk if direction == "LONG" else entry - rr * risk
+    cents = raw * 100.0
+    rounded = math.ceil(cents) if direction == "LONG" else math.floor(cents)
+    return rounded / 100.0
 
 
 def reward_risk(entry: float, stop: float, target: float) -> float:
-    """Reward:risk ratio. Direction-agnostic (uses absolute distances)."""
+    """Reward:risk ratio. Direction-agnostic (uses absolute distances).
+
+    Returns NaN if any input is NaN so callers can treat non-comparable ratios as
+    failing a min-RR gate (``NaN < MIN_RR`` is False, which would otherwise let
+    bad data slip through).
+    """
+    if math.isnan(entry) or math.isnan(stop) or math.isnan(target):
+        return math.nan
     risk = abs(entry - stop)
     if risk <= 0:
         return 0.0

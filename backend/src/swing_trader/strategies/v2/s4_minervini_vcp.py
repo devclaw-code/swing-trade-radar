@@ -140,7 +140,7 @@ class MinerviniVcpStrategy(V2Strategy):
         ]
 
         # Trade plan
-        # Stop just below 20-day low; target = entry + 1.5x box height.
+        # Stop just below 20-day contraction low, floored at 2x ATR; target = 2R.
         recent_low = float(df["low"].iloc[-20:].min())
         # Pivot stop, but never tighter than 2x ATR (esp. on high-vol names).
         stop = floor_stop_with_atr(close, recent_low * 0.99, atr_now, mult=2.0, direction="LONG")

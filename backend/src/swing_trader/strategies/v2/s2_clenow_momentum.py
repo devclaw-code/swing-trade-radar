@@ -161,7 +161,7 @@ class ClenowMomentumStrategy(V2Strategy):
         stop = atr_stop(close, atr, mult=2.5)  # Clenow-style wider trend stop
         # Momentum runs are open-ended: take the further of a 20% chunk or the
         # min-RR target, so a tight ATR stop still yields a >=2.5R objective.
-        target = max(round(close * 1.20, 2), min_rr_target(close, stop, rr=2.5))
+        target = max(round(close * 1.20, 2), min_rr_target(close, stop))
 
         invalidation = [
             "Drops out of top quintile on weekly re-rank",
