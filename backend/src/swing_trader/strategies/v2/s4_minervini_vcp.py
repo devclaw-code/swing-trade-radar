@@ -9,7 +9,7 @@ Approach (heuristic — VCP is discretionary in the original):
       2. Volatility contraction: ATR(20) / ATR(20)_60-mean   weight 0.30
          (lower is better; <0.7 → full credit)
       3. Volume dry-up: vol_sma20 / vol_sma60                 weight 0.15
-      4. Breakout signal: close > 20d high & volume ≥ 1.5×    weight 0.20
+      4. Breakout signal: close > 20d high & volume >= 1.5x   weight 0.20
 
     Final score = weighted sum (0..1).
     Fire only when score > 0.70 AND breakout component is true.
@@ -75,13 +75,12 @@ class MinerviniVcpStrategy(V2Strategy):
         tt_score, _legs = _trend_template_score(df)
 
         # 2. Volatility contraction (ATR ratio)
-        atr20 = df["high"].combine(df["low"], lambda h, lo: h - lo).rolling(20).mean()
+        atr20 = df["high"].combine(df["low"], lambda high, low: high - low).rolling(20).mean()
         # Use ATR14 already present, fall back to true-range proxy
         atr_now = float(df.get("atr14", atr20).iloc[-1])
         atr_long = float(df.get("atr14", atr20).rolling(60).mean().iloc[-1])
         ratio = atr_now / atr_long if atr_long and atr_long > 0 else 1.0
         # 0.7 → 1.0; 1.0 → 0.0; clip
-        contraction_score = max(0.0, min(1.0, (1.0 - ratio) / 0.30 + 1.0)) if ratio < 1.0 else 0.0
         contraction_score = max(0.0, min(1.0, (1.0 - ratio) / 0.3))
 
         # 3. Volume dry-up
@@ -130,7 +129,7 @@ class MinerviniVcpStrategy(V2Strategy):
             ),
             EvidenceItem(
                 factor=(
-                    f"Breakout above 20-day high ({prev_high:.2f}) on {vol_today/vol_avg:.1f}× avg volume"
+                    f"Breakout above 20-day high ({prev_high:.2f}) on {vol_today/vol_avg:.1f}x avg volume"
                 ),
                 value=round(close - prev_high, 2),
                 weight=0.20,

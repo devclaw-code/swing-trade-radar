@@ -8,8 +8,8 @@ Rules (long-only):
     WATCH if  any one of the three legs fails (close>SMA50, SMA50>SMA200, regime)
     No-fire otherwise.
 
-    Stop:   2× ATR(14) below entry.
-    Target: 4× ATR(14) above entry (≈ 2R, trail-with-chandelier in production).
+    Stop:   2x ATR(14) below entry.
+    Target: 4x ATR(14) above entry (≈ 2R, trail-with-chandelier in production).
     Hold:   30 trading days max for swing scope (research notes 60-180d for full position trade).
 """
 

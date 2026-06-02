@@ -12,7 +12,7 @@ Fire BUY if (all):
 Exit:
     - close > SMA(5), OR
     - 5 trading days elapsed, OR
-    - 2× ATR(14) stop hit.
+    - 2x ATR(14) stop hit.
 
 If the optional basket_data fields are missing we degrade gracefully and skip
 the affected gate (still allowed to fire if the per-ticker rules pass).
