@@ -31,6 +31,7 @@ from ..strategies.v2.s4_minervini_vcp import MinerviniVcpStrategy
 from ..strategies.v2.s5_pead import PeadStrategy
 from ..strategies.volume_trend import VolumeTrendStrategy
 from .base_rate import compute_base_rate
+from .blackout import earnings_dates_for
 from .indicators import enrich
 from .regime import compute_regime, offline_default
 from .risk_classifier import ClassifiedSignal, classify
@@ -224,7 +225,13 @@ def default_v2_strategies() -> list[V2Strategy]:
 
 
 def _try_fetch_earnings(ticker: str) -> list:
-    """Best-effort earnings dates from yfinance. Returns [] on failure."""
+    """Best-effort earnings dates from yfinance. Returns [] on failure.
+
+    Fallback only — the primary source is the ``events`` calendar table
+    (W1/W2 refresh job) via ``earnings_dates_for``. yfinance is a per-ticker
+    network call with real rate-limit risk, so it's used solely when the DB
+    has nothing for a ticker.
+    """
     try:
         import yfinance as yf  # local import — keep optional
 
@@ -236,6 +243,37 @@ def _try_fetch_earnings(ticker: str) -> list:
     except Exception as e:
         log.debug("earnings fetch failed for %s: %s", ticker, e)
         return []
+
+
+def _build_earnings_map(tickers: list[str]) -> dict[str, list]:
+    """Earnings dates per ticker, DB-first with yfinance fallback.
+
+    Primary: the ``events`` table populated by the W1/W2 calendar refresh job
+    (Finnhub → AlphaVantage → yfinance, deduped + confirmed). Only when the DB
+    returns nothing for a ticker do we make a best-effort live yfinance call.
+    This keeps S3's no-earnings gate and S5's PEAD trigger fed from the same
+    authoritative source the verdict-layer blackout already uses, without
+    hammering yfinance once per ticker on every run.
+    """
+    earnings_map: dict[str, list] = {}
+    db_hits = 0
+    yf_fallbacks = 0
+    for t in tickers:
+        dates = earnings_dates_for(t)
+        if dates:
+            db_hits += 1
+        else:
+            dates = _try_fetch_earnings(t)
+            if dates:
+                yf_fallbacks += 1
+        earnings_map[t] = dates
+    log.info(
+        "earnings map built: db=%d yfinance_fallback=%d empty=%d",
+        db_hits,
+        yf_fallbacks,
+        len(tickers) - db_hits - yf_fallbacks,
+    )
+    return earnings_map
 
 
 def _build_basket(
@@ -332,8 +370,8 @@ def generate_verdicts(
             log.warning("regime fetch failed, using offline default: %s", e)
             regime = offline_default()
 
-    # 3. Earnings — fetched once per ticker (best-effort, skip macro ETFs)
-    earnings_map = {t: _try_fetch_earnings(t) for t in enriched if t not in macro_tickers}
+    # 3. Earnings — DB-first (events table from W1/W2 refresh), yfinance fallback.
+    earnings_map = _build_earnings_map([t for t in enriched if t not in macro_tickers])
 
     basket = _build_basket(
         enriched_by_ticker=enriched,

@@ -25,7 +25,7 @@ Rules (encode pillar 3 of the AI-Infra Strategist prompt):
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Literal
 
 from sqlalchemy import select
@@ -124,6 +124,45 @@ def next_earnings_for(ticker: str, *, now: datetime | None = None) -> datetime |
             return ev.scheduled_at.replace(tzinfo=UTC) if ev else None
     except Exception:
         return None
+
+
+def earnings_dates_for(
+    ticker: str,
+    *,
+    now: datetime | None = None,
+    horizon_days: int = 45,
+    confirmed_only: bool = True,
+) -> list[date]:
+    """Confirmed upcoming earnings dates for ``ticker`` from the events table.
+
+    Returns a sorted list of ``date`` objects for events scheduled between now and
+    ``now + horizon_days``. This is the same authoritative source W1/W2 populate
+    via the calendar refresh job, so v2 strategies (S3 gate, S5 PEAD) read the
+    same data the verdict-layer blackout/exit-clamp uses.
+
+    Fail-open: returns ``[]`` on any error or when calendars are disabled.
+    """
+    if not settings.calendars_enabled:
+        return []
+    now_naive = (now or datetime.now(UTC)).astimezone(UTC).replace(tzinfo=None)
+    horizon_naive = now_naive + timedelta(days=horizon_days)
+    sym = ticker.upper()
+    try:
+        with session_scope() as s:
+            q = (
+                select(Event.scheduled_at)
+                .where(Event.kind == "earnings")
+                .where(Event.symbol == sym)
+                .where(Event.scheduled_at > now_naive)
+                .where(Event.scheduled_at <= horizon_naive)
+                .order_by(Event.scheduled_at.asc())
+            )
+            if confirmed_only:
+                q = q.where(Event.confirmed.is_(True))
+            rows = s.execute(q).scalars().all()
+        return [dt.date() for dt in rows]
+    except Exception:
+        return []
 
 
 def calendar_is_stale(*, now: datetime | None = None, max_age_hours: int = 36) -> bool:
