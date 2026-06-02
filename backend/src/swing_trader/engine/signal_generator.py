@@ -12,6 +12,8 @@ from ..config import settings
 from ..data.db import Signal as SignalRow
 from ..data.db import VerdictRow, session_scope
 from ..data.price_fetcher import load_ohlcv
+from ..data.sanity import check_data_sanity
+from ..schemas import SanityFlag as SanityFlagSchema
 from ..schemas import Verdict
 from ..strategies.base_strategy import BaseStrategy, Signal
 from ..strategies.bollinger_squeeze import BollingerSqueezeStrategy
@@ -295,12 +297,24 @@ def generate_verdicts(
     # 1. Load + enrich each ticker (universe + macro index ETFs for regime checks)
     macro_tickers = ("SPY", "QQQ")
     enriched: dict[str, pd.DataFrame] = {}
+    sanity_by_ticker: dict[str, list[SanityFlagSchema]] = {}
     for t in list(settings.tickers) + list(macro_tickers):
         try:
             df = load_ohlcv(t)
             if df.empty:
                 continue
             enriched[t] = enrich(df)
+            if t not in macro_tickers:
+                raw_flags = check_data_sanity(enriched[t], ticker=t)
+                sanity_by_ticker[t] = [
+                    SanityFlagSchema(**f.to_dict()) for f in raw_flags
+                ]
+                if raw_flags:
+                    log.info(
+                        "sanity flags for %s: %s",
+                        t,
+                        [(f.code, f.severity) for f in raw_flags],
+                    )
         except Exception as e:  # noqa: BLE001
             log.warning("enrich failed for %s: %s", t, e)
 
@@ -388,6 +402,9 @@ def generate_verdicts(
                     verdict.sparkline = [float(round(x, 4)) for x in tail]
             except Exception as e:  # noqa: BLE001
                 log.warning("sparkline/price enrich failed for %s: %s", ticker, e)
+
+            # Attach sanity flags collected during enrich step.
+            verdict.sanity_flags = sanity_by_ticker.get(ticker, [])
 
             verdicts.append(verdict)
         except Exception as e:  # noqa: BLE001

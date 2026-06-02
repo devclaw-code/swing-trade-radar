@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { RegimeCard } from "@/components/RegimeCard";
+import { SanityBanner } from "@/components/SanityBanner";
 import { VerdictCard } from "@/components/VerdictCard";
 import { getStrategies, getVerdict, type Verdict } from "@/lib/api";
 
@@ -64,6 +65,7 @@ export default async function TickerPage({ params }: { params: Promise<{ symbol:
       </header>
 
       <section className="mx-auto max-w-6xl space-y-6 px-3 py-4 sm:px-6 sm:py-6">
+        <SanityBanner flags={verdict.sanity_flags} />
         <RegimeCard regime={verdict.regime_context} asOf={verdict.as_of} />
 
         <VerdictCard v={verdict} defaultExpanded />

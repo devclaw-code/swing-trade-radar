@@ -82,6 +82,17 @@ export interface Verdict {
   price?: number;
   day_change_pct?: number;
   sparkline?: number[];
+  sanity_flags?: SanityFlag[];
+}
+
+export type SanitySeverity = "info" | "warning" | "high";
+
+export interface SanityFlag {
+  code: string;
+  severity: SanitySeverity;
+  message: string;
+  value?: number | null;
+  threshold?: number | null;
 }
 
 export interface StrategySummary {

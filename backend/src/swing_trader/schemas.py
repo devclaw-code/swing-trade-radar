@@ -18,11 +18,30 @@ from pydantic import BaseModel, ConfigDict, Field
 
 VerdictKind = Literal["BUY", "WATCH", "AVOID", "NO_SETUP"]
 RiskTier = Literal["LOW", "MEDIUM", "HIGH"]
+SanitySeverity = Literal["info", "warning", "high"]
 RegimeVerdict = Literal[
     "favorable for long swings",
     "neutral",
     "unfavorable / risk-off",
 ]
+
+
+class SanityFlag(BaseModel):
+    """A single data sanity flag attached to a verdict.
+
+    Severities:
+      - info: noteworthy but harmless
+      - warning: render yellow; trade with skepticism
+      - high: render red; data is likely wrong or trade is high-risk chase
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    code: str = Field(..., description="Stable machine-readable flag code.")
+    severity: SanitySeverity = Field(..., description="info | warning | high")
+    message: str = Field(..., description="Human-readable explanation for the UI.")
+    value: float | None = Field(default=None, description="The observed value that tripped the check.")
+    threshold: float | None = Field(default=None, description="The threshold the value crossed.")
 
 
 class EvidenceItem(BaseModel):
@@ -124,4 +143,9 @@ class Verdict(BaseModel):
     sparkline: list[float] | None = Field(
         default=None,
         description="Recent close prices (oldest → newest), ~60 bars, for sparkline rendering.",
+    )
+
+    sanity_flags: list[SanityFlag] = Field(
+        default_factory=list,
+        description="Data-quality / chase-risk flags surfaced to the UI as banners.",
     )

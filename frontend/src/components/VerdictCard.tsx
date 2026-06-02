@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { EvidenceItem, RiskTier, Verdict, VerdictKind } from "@/lib/api";
+import { SanityDot } from "./SanityBanner";
 import { Sparkline } from "./Sparkline";
 
 const verdictBadge: Record<VerdictKind, string> = {
@@ -142,6 +143,7 @@ export function VerdictCard({ v, defaultExpanded = false }: { v: Verdict; defaul
           >
             {v.ticker}
           </Link>
+          <SanityDot flags={v.sanity_flags} />
           {typeof v.price === "number" && (
             <span className="font-mono text-sm text-slate-100 sm:text-base">${fmt(v.price)}</span>
           )}
