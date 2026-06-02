@@ -95,6 +95,10 @@ def strategies(
     for s in strats:
         # Derive a short id like "S1" from "S1_trend_50_200"
         short_id = s.name.split("_", 1)[0] if "_" in s.name else s.name
+        card = cards.get(s.name)
+        # "Not yet active" = no walk-forward card yet, or the card has no
+        # out-of-sample trades. Derived here so the UI never hardcodes ids.
+        not_yet_active = card is None or int(card.get("n_trades", 0)) == 0
         info.append(
             {
                 "id": short_id,
@@ -104,7 +108,8 @@ def strategies(
                 "doc_refs": list(s.doc_refs),
                 "counter_argument_keys": list(s.counter_argument_keys),
                 # Walk-forward backtest card (None until the first run populates it).
-                "backtest": cards.get(s.name),
+                "backtest": card,
+                "not_yet_active": not_yet_active,
             }
         )
     return {"count": len(info), "strategies": info}

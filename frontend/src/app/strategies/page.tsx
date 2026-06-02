@@ -66,8 +66,9 @@ export default async function StrategiesPage() {
         )}
 
         {payload.strategies.map((s) => {
-          const notYetActive = s.id === "S2" || s.id === "S4" || s.id === "S5";
-          const s3NegativeSharpe = s.id === "S3";
+          const notYetActive = s.not_yet_active ?? s.backtest === null;
+          const s3NegativeSharpe =
+            s.backtest !== null && s.backtest.n_trades > 0 && s.backtest.sharpe < 0;
           return (
             <article
               key={s.id}
@@ -118,9 +119,9 @@ export default async function StrategiesPage() {
 
               {s3NegativeSharpe && (
                 <p className="mt-3 rounded-md border border-amber-500/50 bg-amber-950/50 px-3 py-2 text-xs leading-relaxed text-amber-200">
-                  ⚠ S3 currently shows a negative Sharpe in backtesting. Live signals are still
-                  generated but should be treated with extra caution — a strategy review is in
-                  progress.
+                  ⚠ {s.id} currently shows a negative Sharpe in backtesting. Live signals are
+                  still generated but should be treated with extra caution — a strategy review is
+                  in progress.
                 </p>
               )}
             </article>

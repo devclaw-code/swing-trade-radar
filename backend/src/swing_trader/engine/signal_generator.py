@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import logging
 import re
 from datetime import UTC, datetime
@@ -631,10 +632,15 @@ def _sanitize_verdict_payload(payload: dict) -> dict:
     """Strip internal dev notes (TODOs, developer names, wiring stubs) from a
     stored verdict before it is served. Stale DB rows may still carry engineering
     chatter in evidence notes; never surface that to users.
+
+    Returns a deep-copied, sanitized payload. The input is never mutated, so this
+    stays safe if a cache (identity map, Redis, lru_cache) ever hands back the
+    same ``payload`` object to multiple callers.
     """
     if not isinstance(payload, dict):
         return payload
-    why = payload.get("why")
+    sanitized = copy.deepcopy(payload)
+    why = sanitized.get("why")
     if isinstance(why, dict):
         evidence = why.get("evidence")
         if isinstance(evidence, list):
@@ -642,4 +648,4 @@ def _sanitize_verdict_payload(payload: dict) -> dict:
                 note = item.get("note") if isinstance(item, dict) else None
                 if isinstance(note, str) and _DEV_NOTE_RE.search(note):
                     item["note"] = _CLEAN_EARNINGS_NOTE
-    return payload
+    return sanitized

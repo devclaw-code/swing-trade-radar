@@ -98,6 +98,7 @@ function SmallSampleWarning({ n }: { n: number }) {
     </p>
   );
 }
+
 function pct(n: number, d = 2) {
   return `${n >= 0 ? "+" : ""}${(n * 100).toFixed(d)}%`;
 }
@@ -535,9 +536,10 @@ export function VerdictCard({
                   . Median hold {v.why.historical_base_rate.median_hold} days.
                 </p>
               )}
-              {v.historical_stats_display?.tier !== "insufficient" && (
-                <SmallSampleWarning n={v.why.historical_base_rate.occurrences} />
-              )}
+              {v.historical_stats_display?.tier !== "insufficient" &&
+                v.historical_stats_display?.tier !== "low" && (
+                  <SmallSampleWarning n={v.why.historical_base_rate.occurrences} />
+                )}
             </Section>
           )}
           {!v.why.historical_base_rate && v.historical_stats_display?.tier === "insufficient" && (

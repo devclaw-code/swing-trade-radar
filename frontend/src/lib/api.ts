@@ -135,6 +135,7 @@ export interface StrategySummary {
   name: string;
   description: string;
   doc_refs: string[];
+  not_yet_active?: boolean;
   backtest: {
     sharpe: number;
     deflated_sharpe: number;
