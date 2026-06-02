@@ -45,8 +45,22 @@ class Settings(BaseSettings):
 
     # --- Data sources ------------------------------------------------------
     alpha_vantage_api_key: str | None = None
+    fred_api_key: str | None = None
+    finnhub_api_key: str | None = None
     price_history_days: int = 250
     yfinance_request_timeout: float = 20.0
+
+    # --- Calendars (macro + earnings) -------------------------------------
+    calendars_enabled: bool = True
+    calendar_horizon_days: int = 14
+    calendar_refresh_hour_utc: int = 6
+    calendar_refresh_minute_utc: int = 0
+    macro_blackout_hours: int = 48     # no new longs in N hours before CPI/FOMC/NFP
+    earnings_exit_hours: int = 24      # exit 24h before earnings during a hold
+    # Federal Reserve calendar JSON feed (not an .ics feed despite FOMC naming).
+    fomc_calendar_url: str = "https://www.federalreserve.gov/json/calendar.json"
+    fred_base_url: str = "https://api.stlouisfed.org/fred"
+    finnhub_base_url: str = "https://finnhub.io/api/v1"
 
     # --- News --------------------------------------------------------------
     news_feeds: list[str] = Field(

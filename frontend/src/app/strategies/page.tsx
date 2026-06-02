@@ -26,14 +26,12 @@ function StatBox({
   tone?: "default" | "good" | "bad";
 }) {
   const cls =
-    tone === "good"
-      ? "text-emerald-300"
-      : tone === "bad"
-        ? "text-rose-300"
-        : "text-slate-50";
+    tone === "good" ? "text-emerald-300" : tone === "bad" ? "text-rose-300" : "text-slate-50";
   return (
     <div className="rounded-md border border-slate-700/60 bg-slate-950 px-3 py-2">
-      <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</div>
+      <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+        {label}
+      </div>
       <div className={`mt-0.5 font-mono text-sm font-semibold ${cls}`}>{value}</div>
     </div>
   );

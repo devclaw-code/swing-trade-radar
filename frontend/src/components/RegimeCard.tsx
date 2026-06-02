@@ -3,7 +3,8 @@ import type { RegimeContext } from "@/lib/api";
 function tone(regime: RegimeContext): "favorable" | "cautious" | "unfavorable" {
   const trend = regime.spy_above_200sma && regime.qqq_above_200sma;
   if (trend && regime.vix < 18 && regime.vix_term_structure !== "backwardation") return "favorable";
-  if (!trend || regime.vix > 25 || regime.vix_term_structure === "backwardation") return "unfavorable";
+  if (!trend || regime.vix > 25 || regime.vix_term_structure === "backwardation")
+    return "unfavorable";
   return "cautious";
 }
 

@@ -67,6 +67,18 @@ docker compose up --build
 
 The backend SQLite DB persists to `./backend/var/` on the host.
 
+## Configuration
+
+Copy `backend/.env.example` to `backend/.env` and fill in keys as needed. **All keys are optional** — the app runs without them and degrades gracefully (calendars fail-open, yfinance fallbacks for prices/earnings).
+
+| Env var | Purpose | Free key |
+|---|---|---|
+| `ALPHA_VANTAGE_API_KEY` | Price + earnings-calendar fallback | [get](https://www.alphavantage.co/support/#api-key) |
+| `FRED_API_KEY` | Macro release dates (CPI, NFP, FOMC) | [get](https://fredaccount.stlouisfed.org/apikeys) |
+| `FINNHUB_API_KEY` | Primary earnings calendar (60 req/min free) | [get](https://finnhub.io/register) |
+
+Calendar/scheduler knobs (`MACRO_BLACKOUT_HOURS`, `EARNINGS_EXIT_HOURS`, `CALENDAR_REFRESH_HOUR_UTC`, etc.) have sane defaults — see `backend/.env.example` for the full list. The `refresh_calendars` job runs daily at 06:00 UTC; the price refresh runs once per trading day after the US close.
+
 ## Disclaimer
 
 This is an educational research project. Verdicts are **suggestions for study**, not investment advice.

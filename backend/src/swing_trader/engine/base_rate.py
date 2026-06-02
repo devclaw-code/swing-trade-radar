@@ -19,8 +19,8 @@ from __future__ import annotations
 
 import logging
 import math
+from collections.abc import Callable
 from datetime import date, datetime
-from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -142,7 +142,7 @@ def compute_base_rate(
         try:
             if not setup_signature(df, i):
                 continue
-        except Exception:  # noqa: BLE001 — robust against odd row data
+        except Exception:
             continue
         sim = _simulate_trade(df, i, atr_col=atr_col, max_hold_days=max_hold_days)
         if sim is None:
@@ -186,7 +186,7 @@ def compute_base_rate(
                     },
                 )
                 s.execute(stmt)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             log.warning("base_rate cache write failed for %s/%s: %s", ticker, setup_id, e)
 
     return result

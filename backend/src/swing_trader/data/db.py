@@ -101,6 +101,28 @@ class VerdictRow(Base):
     __table_args__ = (UniqueConstraint("ticker", "as_of"),)
 
 
+class Event(Base):
+    """Macro release / earnings calendar event.
+
+    `kind`: 'macro' or 'earnings'.
+    `symbol`: ticker for earnings; '' for macro.
+    `release`: 'CPI'|'CORE_PCE'|'NFP'|'PPI'|'FOMC'|'EARNINGS'|...
+    """
+
+    __tablename__ = "events"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    kind: Mapped[str] = mapped_column(String(16), index=True)
+    symbol: Mapped[str] = mapped_column(String(10), default="", index=True)
+    release: Mapped[str] = mapped_column(String(32), index=True)
+    scheduled_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    confirmed: Mapped[bool] = mapped_column(default=True)
+    source: Mapped[str] = mapped_column(String(24))
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    __table_args__ = (
+        UniqueConstraint("kind", "symbol", "release", "scheduled_at", name="uq_events_dedup"),
+    )
+
+
 class Backtest(Base):
     __tablename__ = "backtests"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

@@ -43,12 +43,16 @@ export default async function TickerPage({ params }: { params: Promise<{ symbol:
               ← Back
             </Link>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-50 sm:text-3xl">{verdict.ticker}</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-50 sm:text-3xl">
+                {verdict.ticker}
+              </h1>
               <p className="text-xs text-slate-400">As of {verdict.as_of}</p>
             </div>
             {typeof verdict.price === "number" && (
               <div className="flex items-baseline gap-2 sm:ml-4">
-                <span className="font-mono text-xl font-semibold text-slate-50 sm:text-2xl">${fmt(verdict.price)}</span>
+                <span className="font-mono text-xl font-semibold text-slate-50 sm:text-2xl">
+                  ${fmt(verdict.price)}
+                </span>
                 {typeof verdict.day_change_pct === "number" && (
                   <span
                     className={`font-mono text-sm font-semibold ${
@@ -97,7 +101,9 @@ export default async function TickerPage({ params }: { params: Promise<{ symbol:
                   {strategies.strategies.map((s) => {
                     const fired =
                       verdict.primary_setup === s.name ||
-                      verdict.supporting_setups.some((x) => x.toLowerCase().includes(s.name.toLowerCase().split(" ")[0]));
+                      verdict.supporting_setups.some((x) =>
+                        x.toLowerCase().includes(s.name.toLowerCase().split(" ")[0]),
+                      );
                     return (
                       <tr key={s.id} className="hover:bg-slate-800/50">
                         <td className="px-4 py-2 font-mono text-slate-100">

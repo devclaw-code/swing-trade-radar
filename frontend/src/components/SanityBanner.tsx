@@ -79,10 +79,7 @@ export function SanityBanner({ flags }: { flags?: SanityFlag[] | null }) {
 export function SanityDot({ flags }: { flags?: SanityFlag[] | null }) {
   const sev = highestSeverity(flags);
   if (!sev || sev === "info") return null;
-  const cls =
-    sev === "high"
-      ? "bg-rose-500 ring-rose-300/40"
-      : "bg-amber-400 ring-amber-200/40";
+  const cls = sev === "high" ? "bg-rose-500 ring-rose-300/40" : "bg-amber-400 ring-amber-200/40";
   return (
     <span
       title={`Data sanity: ${sev}`}

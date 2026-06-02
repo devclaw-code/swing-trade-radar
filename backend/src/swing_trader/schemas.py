@@ -12,6 +12,7 @@ References:
 from __future__ import annotations
 
 from datetime import date as _date
+from datetime import datetime as _datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -156,6 +157,23 @@ class ScoreBreakdown(BaseModel):
     )
 
 
+class EventBlackout(BaseModel):
+    """Set on a Verdict when a calendar event suppresses or warns about the trade."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["macro", "earnings"] = Field(
+        ..., description="`macro` for CPI/PCE/NFP/PPI/FOMC; `earnings` for ticker prints."
+    )
+    release: str = Field(..., description="Release code, e.g. CPI, FOMC, EARNINGS.")
+    scheduled_at: _datetime = Field(..., description="Event time in UTC.")
+    hours_until: float = Field(..., description="Hours from `as_of` to event.")
+    confirmed: bool = Field(default=True, description="False for fallback / unconfirmed dates.")
+    suppressed_to: VerdictKind = Field(
+        ..., description="What the verdict was demoted to (typically WATCH)."
+    )
+
+
 class Verdict(BaseModel):
     """Per-ticker, per-day output of the engine. The deliverable."""
 
@@ -231,6 +249,28 @@ class Verdict(BaseModel):
     historical_stats_display: HistoricalStatsDisplay | None = Field(
         default=None,
         description="Ready-to-render struct describing how to display the historical stats.",
+    )
+
+    # ---- Event-calendar gating (W1 + W2: macro + earnings) ----
+    event_blackout: EventBlackout | None = Field(
+        default=None,
+        description=(
+            "Set when a macro release (CPI/PCE/NFP/PPI/FOMC) inside the next "
+            "`macro_blackout_hours` (default 48) or a confirmed earnings inside the same "
+            "window forced this verdict from BUY down to WATCH. Long entries blacklisted by "
+            "both gates; short entries only by earnings."
+        ),
+    )
+    pre_earnings_exit_by: _datetime | None = Field(
+        default=None,
+        description=(
+            "If a confirmed earnings print falls inside the suggested holding window, this is "
+            "the UTC datetime by which the position MUST be exited (24h pre-earnings)."
+        ),
+    )
+    calendar_stale: bool = Field(
+        default=False,
+        description="True when the events table hasn\u2019t been refreshed in >36h; UI should banner this.",
     )
 
 

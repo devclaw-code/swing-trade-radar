@@ -32,7 +32,7 @@ export function PriceChart({ ohlcv, signals = [], height = 400 }: Props) {
         textColor: "#cbd5e1", // slate-300
       },
       grid: {
-        vertLines: { color: "rgba(51,65,85,0.4)" },  // slate-700
+        vertLines: { color: "rgba(51,65,85,0.4)" }, // slate-700
         horzLines: { color: "rgba(51,65,85,0.4)" },
       },
       rightPriceScale: { borderColor: "#334155" },

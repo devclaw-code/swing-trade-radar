@@ -31,7 +31,8 @@ function ComponentBar({ label, comp }: { label: string; comp: ScoreComponent }) 
       <div className="flex items-baseline justify-between gap-3 text-xs">
         <span className="font-medium text-slate-200">{label}</span>
         <span className="font-mono text-slate-400">
-          {comp.value.toFixed(0)} <span className="text-slate-500">· w={(comp.weight * 100).toFixed(0)}%</span>
+          {comp.value.toFixed(0)}{" "}
+          <span className="text-slate-500">· w={(comp.weight * 100).toFixed(0)}%</span>
         </span>
       </div>
       <div className="relative h-2 w-full overflow-hidden rounded-full bg-slate-800">
@@ -40,9 +41,7 @@ function ComponentBar({ label, comp }: { label: string; comp: ScoreComponent }) 
           style={{ width: `${pct}%` }}
         />
       </div>
-      {comp.note && (
-        <p className="text-[11px] leading-snug text-slate-500">{comp.note}</p>
-      )}
+      {comp.note && <p className="text-[11px] leading-snug text-slate-500">{comp.note}</p>}
     </div>
   );
 }
@@ -50,11 +49,7 @@ function ComponentBar({ label, comp }: { label: string; comp: ScoreComponent }) 
 export function ScoreBreakdownCard({ breakdown, correlationPenalty = 0 }: Props) {
   const total = Math.round(breakdown.total);
   const totalColor =
-    total >= 70
-      ? "text-emerald-400"
-      : total >= 50
-        ? "text-amber-400"
-        : "text-rose-400";
+    total >= 70 ? "text-emerald-400" : total >= 50 ? "text-amber-400" : "text-rose-400";
 
   return (
     <section className="rounded-xl border border-slate-700/60 bg-slate-900 p-4 sm:p-5">
@@ -63,9 +58,7 @@ export function ScoreBreakdownCard({ breakdown, correlationPenalty = 0 }: Props)
           Score breakdown
         </h2>
         <div className="flex items-baseline gap-2">
-          <span className={`font-mono text-3xl font-bold ${totalColor}`}>
-            {total}
-          </span>
+          <span className={`font-mono text-3xl font-bold ${totalColor}`}>{total}</span>
           <span className="text-xs text-slate-500">/ 100</span>
           {correlationPenalty > 0 && (
             <span
@@ -80,11 +73,7 @@ export function ScoreBreakdownCard({ breakdown, correlationPenalty = 0 }: Props)
 
       <div className="grid gap-3 sm:grid-cols-2">
         {COMPONENT_ORDER.map(({ key, label }) => (
-          <ComponentBar
-            key={key}
-            label={label}
-            comp={breakdown[key] as ScoreComponent}
-          />
+          <ComponentBar key={key} label={label} comp={breakdown[key] as ScoreComponent} />
         ))}
       </div>
 
@@ -125,8 +114,7 @@ export function ScoreBreakdownMini({ breakdown }: { breakdown: ScoreBreakdown })
         {top.map((t, i) => (
           <span key={t.label} className="text-slate-300">
             {i > 0 && ", "}
-            {t.label}{" "}
-            <span className="font-mono text-slate-400">{t.value.toFixed(0)}</span>
+            {t.label} <span className="font-mono text-slate-400">{t.value.toFixed(0)}</span>
           </span>
         ))}
       </div>
@@ -135,8 +123,7 @@ export function ScoreBreakdownMini({ breakdown }: { breakdown: ScoreBreakdown })
         {bottom.map((t, i) => (
           <span key={t.label} className="text-slate-300">
             {i > 0 && ", "}
-            {t.label}{" "}
-            <span className="font-mono text-slate-400">{t.value.toFixed(0)}</span>
+            {t.label} <span className="font-mono text-slate-400">{t.value.toFixed(0)}</span>
           </span>
         ))}
       </div>

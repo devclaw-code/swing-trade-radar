@@ -44,12 +44,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`} data-theme="dark">
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      data-theme="dark"
+    >
       <body className="flex min-h-full flex-col bg-slate-950 text-slate-100">
         <SiteNav />
         {USE_MOCKS && (
           <div className="border-b-2 border-rose-500 bg-rose-700 px-6 py-2 text-center text-xs font-bold uppercase tracking-wider text-white">
-            ⚠ MOCK DATA — Backend not connected. Prices, verdicts, and base rates are placeholder values, NOT real market data.
+            ⚠ MOCK DATA — Backend not connected. Prices, verdicts, and base rates are placeholder
+            values, NOT real market data.
           </div>
         )}
         <div className="border-b border-amber-500/40 bg-amber-900/40 px-3 py-1.5 text-center text-[11px] font-medium text-amber-200 sm:px-6">

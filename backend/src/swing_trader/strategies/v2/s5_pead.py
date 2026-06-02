@@ -56,9 +56,10 @@ class PeadStrategy(V2Strategy):
         # Find most recent earnings within window
         recent_earn = None
         for d in earnings_dates:
-            if as_of - timedelta(days=20) <= d <= as_of:
-                if recent_earn is None or d > recent_earn:
-                    recent_earn = d
+            if as_of - timedelta(days=20) <= d <= as_of and (
+                recent_earn is None or d > recent_earn
+            ):
+                recent_earn = d
 
         if recent_earn is None:
             evidence = [
