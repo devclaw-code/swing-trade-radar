@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert_v2  # alias for clarity below
 
 from ..config import settings
 from ..data.db import Signal as SignalRow
@@ -21,19 +22,19 @@ from ..strategies.ma_crossover import MaCrossoverStrategy
 from ..strategies.macd_trend import MacdTrendStrategy
 from ..strategies.rsi_mean_reversion import RsiMeanReversionStrategy
 from ..strategies.sr_breakout import SrBreakoutStrategy
-from ..strategies.volume_trend import VolumeTrendStrategy
 from ..strategies.v2.base import StrategyResult, V2Strategy
 from ..strategies.v2.s1_trend_50_200 import TrendFiftyTwoHundredStrategy
 from ..strategies.v2.s2_clenow_momentum import ClenowMomentumStrategy, compute_basket_scores
 from ..strategies.v2.s3_connors_rsi2 import ConnorsRsi2Strategy
 from ..strategies.v2.s4_minervini_vcp import MinerviniVcpStrategy
 from ..strategies.v2.s5_pead import PeadStrategy
+from ..strategies.volume_trend import VolumeTrendStrategy
 from .base_rate import compute_base_rate
 from .indicators import enrich
 from .regime import compute_regime, offline_default
 from .risk_classifier import ClassifiedSignal, classify
-from .verdict import synthesize_verdict
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert_v2  # alias for clarity below
+from .scoring import apply_correlation_penalties
+from .verdict import attach_score_breakdown, synthesize_verdict
 
 log = logging.getLogger(__name__)
 
@@ -227,14 +228,14 @@ def _try_fetch_earnings(ticker: str) -> list:
         if ed is None or ed.empty:
             return []
         return [ts.date() for ts in ed.index.to_pydatetime()]
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         log.debug("earnings fetch failed for %s: %s", ticker, e)
         return []
 
 
 def _build_basket(
     *,
-    enriched_by_ticker: dict[str, "pd.DataFrame"],
+    enriched_by_ticker: dict[str, pd.DataFrame],
     vix: float | None,
     earnings: dict[str, list],
 ) -> dict:
@@ -315,7 +316,7 @@ def generate_verdicts(
                         t,
                         [(f.code, f.severity) for f in raw_flags],
                     )
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             log.warning("enrich failed for %s: %s", t, e)
 
     # 2. Regime
@@ -324,7 +325,7 @@ def generate_verdicts(
     else:
         try:
             regime = compute_regime()
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             log.warning("regime fetch failed, using offline default: %s", e)
             regime = offline_default()
 
@@ -348,7 +349,7 @@ def generate_verdicts(
             for strat in strategies:
                 try:
                     results.append(strat.evaluate(df, ticker, basket))
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:
                     log.exception("strat %s failed on %s: %s", strat.name, ticker, e)
                     errors += 1
 
@@ -388,6 +389,40 @@ def generate_verdicts(
                 base_rate_lookup=_make_lookup(),
             )
 
+            # ---- Score breakdown -------------------------------------------------
+            # Pick the same `primary` the synthesizer used so scoring lines up.
+            fired = [r for r in results if r.fired]
+            fired.sort(key=lambda r: r.score, reverse=True)
+            if fired:
+                primary_for_score = fired[0]
+            elif results:
+                primary_for_score = max(results, key=lambda r: r.score)
+            else:
+                primary_for_score = None
+
+            base_rate_for_score = None
+            if primary_for_score is not None:
+                try:
+                    base_rate_for_score = _make_lookup()(primary_for_score)
+                except Exception as e:
+                    log.debug("base_rate (for scoring) failed for %s: %s", ticker, e)
+
+            dte: int | None = None
+            today_dt = as_of
+            edates = earnings_map.get(ticker) or []
+            future_edates = [d for d in edates if d >= today_dt]
+            if future_edates:
+                dte = (min(future_edates) - today_dt).days
+
+            attach_score_breakdown(
+                verdict,
+                df=df,
+                primary=primary_for_score,
+                sanity_flags=sanity_by_ticker.get(ticker, []),
+                base_rate=base_rate_for_score,
+                days_to_earnings=dte,
+            )
+
             # Latest-bar enrichment for UI header.
             try:
                 closes = df["close"].dropna()
@@ -400,16 +435,29 @@ def generate_verdicts(
                             verdict.day_change_pct = round((last_close - prev) / prev, 6)
                     tail = closes.tail(60).tolist()
                     verdict.sparkline = [float(round(x, 4)) for x in tail]
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 log.warning("sparkline/price enrich failed for %s: %s", ticker, e)
 
             # Attach sanity flags collected during enrich step.
             verdict.sanity_flags = sanity_by_ticker.get(ticker, [])
 
             verdicts.append(verdict)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             log.exception("verdict synth failed for %s: %s", ticker, e)
             errors += 1
+
+    # ---- Correlation post-pass --------------------------------------------
+    # Sort by score descending so higher-scoring trades get priority and
+    # downgrade their lower-scoring correlated peers.
+    scored = [v for v in verdicts if v.score is not None]
+    scored.sort(key=lambda v: v.score or 0.0, reverse=True)
+    try:
+        apply_correlation_penalties(
+            verdicts_in_order=scored,
+            enriched_by_ticker={t: d for t, d in enriched.items() if t not in macro_tickers},
+        )
+    except Exception as e:
+        log.warning("correlation post-pass failed: %s", e)
 
     n_persisted = _persist_verdicts(verdicts) if persist else 0
     finished = datetime.now(UTC).replace(tzinfo=None)

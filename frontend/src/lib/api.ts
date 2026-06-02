@@ -83,6 +83,29 @@ export interface Verdict {
   day_change_pct?: number;
   sparkline?: number[];
   sanity_flags?: SanityFlag[];
+  score?: number | null;
+  score_breakdown?: ScoreBreakdown | null;
+  correlation_penalty?: number;
+}
+
+export interface ScoreComponent {
+  value: number;
+  weight: number;
+  note: string;
+}
+
+export interface ScoreBreakdown {
+  trend_quality: ScoreComponent;
+  momentum: ScoreComponent;
+  mean_reversion: ScoreComponent;
+  risk_reward: ScoreComponent;
+  volatility: ScoreComponent;
+  earnings_risk: ScoreComponent;
+  historical_reliability: ScoreComponent;
+  extension_risk: ScoreComponent;
+  total: number;
+  weights: Record<string, number>;
+  correlation_penalty: number;
 }
 
 export type SanitySeverity = "info" | "warning" | "high";

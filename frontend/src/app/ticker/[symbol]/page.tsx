@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { RegimeCard } from "@/components/RegimeCard";
 import { SanityBanner } from "@/components/SanityBanner";
+import { ScoreBreakdownCard } from "@/components/ScoreBreakdownCard";
 import { VerdictCard } from "@/components/VerdictCard";
 import { getStrategies, getVerdict, type Verdict } from "@/lib/api";
 
@@ -69,6 +70,13 @@ export default async function TickerPage({ params }: { params: Promise<{ symbol:
         <RegimeCard regime={verdict.regime_context} asOf={verdict.as_of} />
 
         <VerdictCard v={verdict} defaultExpanded />
+
+        {verdict.score_breakdown && (
+          <ScoreBreakdownCard
+            breakdown={verdict.score_breakdown}
+            correlationPenalty={verdict.correlation_penalty ?? 0}
+          />
+        )}
 
         {/* Strategy evaluation table */}
         {strategies && (

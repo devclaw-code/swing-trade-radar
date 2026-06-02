@@ -110,6 +110,51 @@ class TargetLevel(PriceLevel):
     rr: float | None = None
 
 
+class ScoreComponent(BaseModel):
+    """One component of the transparent score breakdown.
+
+    Each component is normalized to 0..100, where 100 = best possible
+    contribution from that lens (most bullish / least risky).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    value: float = Field(..., ge=0.0, le=100.0)
+    weight: float = Field(..., ge=0.0, le=1.0, description="Blend weight in the final score.")
+    note: str = Field(default="", description="Short human-readable rationale for this value.")
+
+
+class ScoreBreakdown(BaseModel):
+    """Transparent 8-component score breakdown.
+
+    `total` is the weighted blend (0..100). Components are independent enough
+    that the UI can render them as side-by-side bars.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    trend_quality: ScoreComponent
+    momentum: ScoreComponent
+    mean_reversion: ScoreComponent
+    risk_reward: ScoreComponent
+    volatility: ScoreComponent
+    earnings_risk: ScoreComponent
+    historical_reliability: ScoreComponent
+    extension_risk: ScoreComponent
+
+    total: float = Field(..., ge=0.0, le=100.0)
+    weights: dict[str, float] = Field(
+        default_factory=dict,
+        description="Component name → blend weight. Sums to ~1.0.",
+    )
+    correlation_penalty: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=100.0,
+        description="Points subtracted from total due to high correlation with already-selected trades.",
+    )
+
+
 class Verdict(BaseModel):
     """Per-ticker, per-day output of the engine. The deliverable."""
 
@@ -148,4 +193,21 @@ class Verdict(BaseModel):
     sanity_flags: list[SanityFlag] = Field(
         default_factory=list,
         description="Data-quality / chase-risk flags surfaced to the UI as banners.",
+    )
+
+    score: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=100.0,
+        description="Headline 0-100 trade score (weighted blend of score_breakdown components, minus correlation penalty).",
+    )
+    score_breakdown: ScoreBreakdown | None = Field(
+        default=None,
+        description="Transparent component-by-component breakdown of the trade score.",
+    )
+    correlation_penalty: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=100.0,
+        description="Points subtracted from the headline score because of high correlation with higher-scoring trades in the same dashboard run.",
     )

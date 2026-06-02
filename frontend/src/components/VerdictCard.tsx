@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { EvidenceItem, RiskTier, Verdict, VerdictKind } from "@/lib/api";
+import type { EvidenceItem, RiskTier, ScoreBreakdown, Verdict, VerdictKind } from "@/lib/api";
 import { SanityDot } from "./SanityBanner";
 import { Sparkline } from "./Sparkline";
 
@@ -41,6 +41,80 @@ function ConvictionBar({ value }: { value: number }) {
         <div className={`h-full ${tone}`} style={{ width: `${v * 100}%` }} />
       </div>
       <span className="font-mono text-xs font-semibold text-slate-300">{pctVal}%</span>
+    </div>
+  );
+}
+
+function ScoreBadge({
+  score,
+  breakdown,
+  correlationPenalty,
+}: {
+  score: number;
+  breakdown: ScoreBreakdown;
+  correlationPenalty: number;
+}) {
+  const items: { label: string; value: number }[] = [
+    { label: "Trend", value: breakdown.trend_quality.value },
+    { label: "Momentum", value: breakdown.momentum.value },
+    { label: "MeanRev", value: breakdown.mean_reversion.value },
+    { label: "R/R", value: breakdown.risk_reward.value },
+    { label: "Vol", value: breakdown.volatility.value },
+    { label: "Earnings", value: breakdown.earnings_risk.value },
+    { label: "History", value: breakdown.historical_reliability.value },
+    { label: "Extension", value: breakdown.extension_risk.value },
+  ];
+  const sorted = [...items].sort((a, b) => b.value - a.value);
+  const top = sorted.slice(0, 3);
+  const bottom = sorted.slice(-2).reverse();
+  const tip =
+    `Score ${score.toFixed(0)}/100\n` +
+    `Top:  ${top.map((t) => `${t.label} ${t.value.toFixed(0)}`).join(", ")}\n` +
+    `Drag: ${bottom.map((t) => `${t.label} ${t.value.toFixed(0)}`).join(", ")}` +
+    (correlationPenalty > 0 ? `\nCorrelation penalty: −1${correlationPenalty.toFixed(0)}` : "");
+
+  const tone =
+    score >= 70
+      ? "border-emerald-500/60 bg-emerald-950/60 text-emerald-300"
+      : score >= 50
+        ? "border-amber-500/60 bg-amber-950/60 text-amber-300"
+        : "border-rose-500/60 bg-rose-950/60 text-rose-300";
+
+  return (
+    <div
+      className={`flex items-center gap-2 rounded-md border ${tone} px-2 py-1.5 text-xs`}
+      title={tip}
+    >
+      <div className="flex items-baseline gap-1">
+        <span className="text-[10px] uppercase tracking-wide opacity-70">Score</span>
+        <span className="font-mono text-base font-bold">{Math.round(score)}</span>
+        <span className="text-[10px] opacity-60">/100</span>
+      </div>
+      <div className="flex h-3 flex-1 items-center gap-px" aria-hidden>
+        {items.map((it) => {
+          const h = Math.max(2, Math.min(12, (it.value / 100) * 12));
+          const c =
+            it.value >= 70
+              ? "bg-emerald-400"
+              : it.value >= 50
+                ? "bg-amber-400"
+                : it.value >= 30
+                  ? "bg-orange-400"
+                  : "bg-rose-400";
+          return (
+            <span
+              key={it.label}
+              className={`block w-1.5 rounded-sm ${c}`}
+              style={{ height: `${h}px` }}
+            />
+          );
+        })}
+      </div>
+      {correlationPenalty > 0 && (
+        <span className="font-mono text-[10px] text-amber-300" title="Correlation penalty">
+          −{correlationPenalty.toFixed(0)}
+        </span>
+      )}
     </div>
   );
 }
@@ -186,6 +260,10 @@ export function VerdictCard({ v, defaultExpanded = false }: { v: Verdict; defaul
           </div>
           <ConvictionBar value={v.conviction} />
         </div>
+
+        {typeof v.score === "number" && v.score_breakdown && (
+          <ScoreBadge score={v.score} breakdown={v.score_breakdown} correlationPenalty={v.correlation_penalty ?? 0} />
+        )}
 
         <p className="text-sm leading-snug text-slate-200">{v.why.headline}</p>
 

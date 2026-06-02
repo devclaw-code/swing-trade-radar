@@ -21,10 +21,10 @@ Rules:
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from datetime import date
 from functools import lru_cache
 from pathlib import Path
-from typing import Callable
 
 import yaml
 
@@ -40,6 +40,7 @@ from ..schemas import (
     WhyBlock,
 )
 from ..strategies.v2.base import StrategyResult
+from .scoring import ScoringContext, compute_score_breakdown
 
 log = logging.getLogger(__name__)
 
@@ -113,6 +114,9 @@ def synthesize_verdict(
     strategy_results: list[StrategyResult],
     regime: RegimeContext,
     base_rate_lookup: Callable[[StrategyResult], BaseRateBlock | None] | None = None,
+    df=None,
+    sanity_flags=None,
+    days_to_earnings: int | None = None,
 ) -> Verdict:
     """Build a Verdict from the strategy results."""
     fired = [r for r in strategy_results if r.fired]
@@ -149,7 +153,7 @@ def synthesize_verdict(
     if primary is not None and base_rate_lookup is not None:
         try:
             base_rate = base_rate_lookup(primary)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             log.warning("base_rate lookup failed for %s: %s", ticker, e)
 
     if primary is not None and primary.fired:
@@ -218,3 +222,34 @@ def synthesize_verdict(
         why=why,
         risk_tier=risk_tier,  # type: ignore[arg-type]
     )
+
+
+def attach_score_breakdown(
+    verdict: Verdict,
+    *,
+    df,
+    primary: StrategyResult | None,
+    sanity_flags=None,
+    base_rate: BaseRateBlock | None = None,
+    days_to_earnings: int | None = None,
+) -> Verdict:
+    """Compute and attach the transparent score breakdown to a verdict.
+
+    Kept separate from `synthesize_verdict` so callers can pass the enriched
+    dataframe without forcing every test/fixture to do so.
+    """
+    if df is None or getattr(df, "empty", False):
+        return verdict
+    breakdown = compute_score_breakdown(
+        ScoringContext(
+            ticker=verdict.ticker,
+            df=df,
+            primary=primary,
+            sanity_flags=sanity_flags or [],
+            base_rate=base_rate,
+            days_to_earnings=days_to_earnings,
+        )
+    )
+    verdict.score_breakdown = breakdown
+    verdict.score = breakdown.total
+    return verdict
