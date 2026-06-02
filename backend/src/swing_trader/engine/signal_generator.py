@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
@@ -617,4 +618,28 @@ def latest_verdicts(
             q = q.where(VerdictRow.verdict == verdict.upper())
         q = q.order_by(VerdictRow.conviction.desc())
         rows = s.execute(q).scalars().all()
-    return [r.payload for r in rows]
+    return [_sanitize_verdict_payload(r.payload) for r in rows]
+
+
+_DEV_NOTE_RE = re.compile(
+    r"TODO|devclaw|wire yfinance|calendar unavailable|gate skipped", re.IGNORECASE
+)
+_CLEAN_EARNINGS_NOTE = "Earnings check unavailable — verify manually before entry."
+
+
+def _sanitize_verdict_payload(payload: dict) -> dict:
+    """Strip internal dev notes (TODOs, developer names, wiring stubs) from a
+    stored verdict before it is served. Stale DB rows may still carry engineering
+    chatter in evidence notes; never surface that to users.
+    """
+    if not isinstance(payload, dict):
+        return payload
+    why = payload.get("why")
+    if isinstance(why, dict):
+        evidence = why.get("evidence")
+        if isinstance(evidence, list):
+            for item in evidence:
+                note = item.get("note") if isinstance(item, dict) else None
+                if isinstance(note, str) and _DEV_NOTE_RE.search(note):
+                    item["note"] = _CLEAN_EARNINGS_NOTE
+    return payload
