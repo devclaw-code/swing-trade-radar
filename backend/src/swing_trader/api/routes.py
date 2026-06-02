@@ -12,6 +12,7 @@ from ..data.db import Meta, Run, session_scope
 from ..data.news_scraper import latest_news
 from ..data.price_fetcher import load_ohlcv
 from ..engine.backtester import backtest_all, latest_results
+from ..engine.backtester_v2 import backtest_all_v2, latest_v2_cards
 from ..engine.conservative import apply_conservative_filter
 from ..engine.regime import compute_regime, offline_default
 from ..engine.signal_generator import (
@@ -89,6 +90,7 @@ def strategies(
     }
 
     strats: list[V2Strategy] = default_v2_strategies()
+    cards = latest_v2_cards()
     info = []
     for s in strats:
         # Derive a short id like "S1" from "S1_trend_50_200"
@@ -101,8 +103,8 @@ def strategies(
                 "risk_tier": s.risk_tier,
                 "doc_refs": list(s.doc_refs),
                 "counter_argument_keys": list(s.counter_argument_keys),
-                # TODO(devclaw): wire walk-forward backtest stats per strategy.
-                "backtest": None,
+                # Walk-forward backtest card (None until the first run populates it).
+                "backtest": cards.get(s.name),
             }
         )
     return {"count": len(info), "strategies": info}
@@ -188,6 +190,22 @@ def backtest_all_results() -> dict:
     return {"count": len(rows), "strategies": grouped}
 
 
+@router.get("/backtest/v2")
+def backtest_v2_results() -> dict:
+    """Latest walk-forward v2 backtest cards, keyed by strategy.
+
+    Each card carries Sharpe, deflated Sharpe, and the deploy-gate flag
+    (``passes_gate`` = deflated Sharpe >= 1.0 with >= 20 out-of-sample trades).
+    Declared before ``/backtest/{strategy}`` so "v2" isn't captured as a param.
+    """
+    cards = latest_v2_cards()
+    return {
+        "count": len(cards),
+        "gate": "deflated_sharpe >= 1.0 and n_trades >= 20",
+        "strategies": cards,
+    }
+
+
 @router.get("/backtest/{strategy}")
 def backtest_for_strategy(strategy: str) -> dict:
     rows = latest_results(strategy=strategy)
@@ -239,4 +257,11 @@ def ticker_detail(ticker: str, bars: int = 120) -> dict:
 def backtest_run(bg: BackgroundTasks) -> dict:
     """Kick off a full backtest run in the background."""
     bg.add_task(backtest_all)
+    return {"status": "started"}
+
+
+@router.post("/backtest/v2/run")
+def backtest_v2_run(bg: BackgroundTasks) -> dict:
+    """Kick off the walk-forward v2 backtest (deflated Sharpe) in the background."""
+    bg.add_task(backtest_all_v2)
     return {"status": "started"}
