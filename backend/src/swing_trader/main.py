@@ -84,6 +84,16 @@ def run_refresh_pipeline() -> dict:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    # Warm the tactical expected-hold cache off the request path so the first
+    # /api/tactical scan returns real medians without an inline replay.
+    try:
+        import threading
+
+        from .engine.tactical_holds import warm_expected_holds
+
+        threading.Thread(target=warm_expected_holds, name="warm-holds-boot", daemon=True).start()
+    except Exception as e:
+        log.warning("expected-hold warm-on-boot failed to start: %s", e)
     if settings.refresh_on_boot:
         # APScheduler will also be wired in scheduler.py; for now boot kicks once.
         try:

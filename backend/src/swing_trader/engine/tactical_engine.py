@@ -34,10 +34,13 @@ def _result_to_card(ticker: str, as_of: date, res: TacticalResult) -> dict:
     """Serialize a fired TacticalResult into the API card shape."""
     exp = res.expected_hold_days
     if exp is not None:
-        # 1.5 -> "~1-2", 3.0 -> "~3" days.
         lo = int(exp)
         hi = lo + 1 if exp - lo >= 0.25 else lo
-        exp_label = f"~{lo} days" if lo == hi else f"~{lo}-{hi} days"
+        if lo == hi:
+            unit = "day" if lo == 1 else "days"
+            exp_label = f"~{lo} {unit}"
+        else:
+            exp_label = f"~{lo}-{hi} days"
     else:
         exp_label = None
     return {
