@@ -304,7 +304,7 @@ export interface TacticalCard {
 }
 export interface TacticalResponse {
   count: number;
-  as_of: string;
+  generated_at: string;
   regime_filter: string;
   n_scanned: number;
   errors: number;

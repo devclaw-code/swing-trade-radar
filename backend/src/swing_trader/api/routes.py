@@ -194,7 +194,7 @@ def tactical_all(setup: str | None = None) -> dict:
         cards = [c for c in cards if c["setup_id"] == setup]
     return {
         "count": len(cards),
-        "as_of": result["finished_at"],
+        "generated_at": result["finished_at"],
         "regime_filter": result["regime_filter"],
         "n_scanned": result["n_scanned"],
         "errors": result["errors"],

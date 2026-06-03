@@ -14,6 +14,11 @@ function fmt(n: number | null | undefined, d = 2) {
   return n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
+// Price with `$` prefix only when numeric; bare em-dash otherwise.
+function price(n: number | null | undefined) {
+  return typeof n === "number" ? `$${fmt(n)}` : "—";
+}
+
 export function TacticalCard({ c }: { c: TacticalCardType }) {
   const entry = c.entry_zone?.price;
   const stop = c.stop_loss?.price;
@@ -62,17 +67,17 @@ export function TacticalCard({ c }: { c: TacticalCardType }) {
           <div className="text-[9px] uppercase text-slate-500">
             Entry{c.entry_zone?.type === "stop" ? " (stop)" : ""}
           </div>
-          <div className="text-slate-100">${fmt(entry)}</div>
+          <div className="text-slate-100">{price(entry)}</div>
         </div>
         <div>
           <div className="text-[9px] uppercase text-slate-500">Stop</div>
-          <div className="text-rose-300">${fmt(stop)}</div>
+          <div className="text-rose-300">{price(stop)}</div>
         </div>
         <div>
           <div className="text-[9px] uppercase text-slate-500">
             Target{typeof rr === "number" ? ` · ${rr.toFixed(1)}R` : ""}
           </div>
-          <div className="text-emerald-300">${fmt(target)}</div>
+          <div className="text-emerald-300">{price(target)}</div>
         </div>
       </div>
 

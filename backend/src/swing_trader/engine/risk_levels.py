@@ -94,7 +94,7 @@ def dynamic_atr_trade(
     stop_mult: float = ATR_STOP_MULT_DYNAMIC,
     rr: float = MIN_RR_TACTICAL,
     direction: Direction = "LONG",
-) -> dict[str, float]:
+) -> dict[str, float | None]:
     """Volatility-adjusted trade geometry — the dynamic-ATR risk model.
 
     Replaces the old static 2.50 R:R with a per-ticker, volatility-scaled plan:
@@ -113,7 +113,7 @@ def dynamic_atr_trade(
         "entry": round(float(entry), 2),
         "stop_loss": stop,
         "take_profit": target,
-        "atr": round(float(atr14), 4) if _atr_valid(atr14) else float("nan"),
+        "atr": round(float(atr14), 4) if _atr_valid(atr14) else None,
         "rr_realized": round(reward_risk(entry, stop, target), 3),
     }
 
