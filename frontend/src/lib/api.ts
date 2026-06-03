@@ -296,6 +296,9 @@ export interface TacticalCard {
   stop_loss: TacticalLevel;
   target: TacticalLevel;
   max_hold: string;
+  max_hold_days: number;
+  expected_hold_days: number | null;
+  expected_hold: string | null;
   volatility_atr: number | null;
   risk_tier: RiskTier;
   regime_filter: string;
