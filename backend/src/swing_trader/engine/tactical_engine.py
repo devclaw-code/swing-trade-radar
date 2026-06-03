@@ -17,6 +17,7 @@ from ..strategies.tactical.t1_rsi_exhaustion import RsiExhaustionStrategy
 from ..strategies.tactical.t2_inside_day_breakout import InsideDayBreakoutStrategy
 from .atr import compute_atr14
 from .indicators import enrich
+from .tactical_holds import expected_hold_for
 
 log = logging.getLogger(__name__)
 
@@ -31,6 +32,14 @@ def default_tactical_strategies() -> list[TacticalStrategy]:
 
 def _result_to_card(ticker: str, as_of: date, res: TacticalResult) -> dict:
     """Serialize a fired TacticalResult into the API card shape."""
+    exp = res.expected_hold_days
+    if exp is not None:
+        # 1.5 -> "~1-2", 3.0 -> "~3" days.
+        lo = int(exp)
+        hi = lo + 1 if exp - lo >= 0.25 else lo
+        exp_label = f"~{lo} days" if lo == hi else f"~{lo}-{hi} days"
+    else:
+        exp_label = None
     return {
         "ticker": ticker,
         "as_of": as_of.isoformat(),
@@ -42,7 +51,10 @@ def _result_to_card(ticker: str, as_of: date, res: TacticalResult) -> dict:
         "entry_zone": {"price": res.entry_price, "type": res.entry_type},
         "stop_loss": {"price": res.stop_price},
         "target": {"price": res.target_price, "rr": res.rr_realized},
-        "max_hold": f"{res.max_hold_days} trading days",
+        "max_hold": f"≤ {res.max_hold_days} trading days",
+        "max_hold_days": res.max_hold_days,
+        "expected_hold_days": res.expected_hold_days,
+        "expected_hold": exp_label,
         "volatility_atr": (
             round(res.volatility_atr, 4) if res.volatility_atr is not None else None
         ),
@@ -91,6 +103,8 @@ def generate_tactical(*, only_fired: bool = True) -> dict:
                     continue
                 if res.volatility_atr is None:
                     res.volatility_atr = ticker_atr
+                if res.expected_hold_days is None:
+                    res.expected_hold_days = expected_hold_for(res.setup_id)
                 cards.append(_result_to_card(ticker, as_of, res))
         except Exception as e:
             log.warning("tactical ticker %s failed: %s", ticker, e)

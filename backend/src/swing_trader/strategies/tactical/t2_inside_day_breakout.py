@@ -124,7 +124,7 @@ class InsideDayBreakoutStrategy(TacticalStrategy):
                 invalidation_conditions=[
                     f"No fill if price never tags buy-stop {entry:.2f}",
                     f"Stop at {stop:.2f} (inside-day low - $0.05, ATR-floored)",
-                    "Exit after 5 trading days if target not hit",
+                    f"Exit after {self.max_hold_days} trading days if target not hit",
                 ],
                 headline=f"{ticker}: inside-day compression breakout above {entry:.2f} with EMA10 rising.",
                 entry_price=entry,

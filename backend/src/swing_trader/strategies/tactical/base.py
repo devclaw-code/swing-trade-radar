@@ -37,6 +37,7 @@ class TacticalResult:
     target_price: float | None = None
     entry_type: str = "market"  # "market" | "stop" (buy-stop breakout)
     max_hold_days: int = 5
+    expected_hold_days: float | None = None  # data-backed median; None -> use cap
     volatility_atr: float | None = None
     rr_realized: float | None = None
     risk_tier: str = "MEDIUM"

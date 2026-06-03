@@ -82,7 +82,16 @@ export function TacticalCard({ c }: { c: TacticalCardType }) {
       </div>
 
       <div className="flex items-center justify-between text-[11px] text-slate-500">
-        <span>{c.max_hold}</span>
+        <span>
+          {c.expected_hold ? (
+            <>
+              <span className="text-slate-300">Hold {c.expected_hold}</span>
+              <span className="text-slate-500"> ({c.max_hold})</span>
+            </>
+          ) : (
+            c.max_hold
+          )}
+        </span>
         <span className="font-mono">score {(c.score * 100).toFixed(0)}</span>
       </div>
     </div>

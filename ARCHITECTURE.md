@@ -216,6 +216,13 @@ RSI(4) and EMA(10) are computed on-the-fly inside each setup (not part of the
 shared `enrich()` pass). All setups wrap evaluation in `try/except` and return a
 clean *not-fired* result on NaN/short-history/malformed bars.
 
+**Expected hold (data-backed).** `max_hold_days` (5) is only the *timeout cap*.
+`engine/tactical_holds.py` replays each setup's **exact** entry/exit rules across
+~5y of history for the whole universe and reports the **median** realised hold
+(`expected_hold_days`), cached 6h. Empirically: T1 ≈ **1 day** (mean-reversion
+snaps back fast), T2 ≈ **2 days**. Cards surface both: `expected_hold` ("~1 days")
+and `max_hold` ("≤ 5 trading days").
+
 ---
 
 ## 5. Backtesting
