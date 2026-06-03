@@ -18,6 +18,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 VerdictKind = Literal["BUY", "WATCH", "AVOID", "NO_SETUP"]
+TimeHorizon = Literal["Core", "Tactical"]
 RiskTier = Literal["LOW", "MEDIUM", "HIGH"]
 SanitySeverity = Literal["info", "warning", "high"]
 Reliability = Literal["high", "medium", "low", "insufficient"]
@@ -186,6 +187,15 @@ class Verdict(BaseModel):
 
     primary_setup: str = Field(default="", description="Name of the highest-scoring fired strategy.")
     supporting_setups: list[str] = Field(default_factory=list)
+
+    time_horizon: TimeHorizon = Field(
+        default="Core",
+        description="Hold-horizon bucket: 'Core' (30-day trend) or 'Tactical' (1-5 day).",
+    )
+    volatility_atr: float | None = Field(
+        default=None,
+        description="Latest daily ATR(14) of the asset, for volatility-adjusted sizing/UI.",
+    )
 
     entry_zone: PriceLevel | None = None
     stop_loss: StopLevel | None = None

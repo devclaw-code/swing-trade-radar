@@ -18,7 +18,9 @@ Direction = Literal["LONG", "SHORT"]
 # --- Tunables --------------------------------------------------------------
 ATR_STOP_MULT = 2.0          # default: entry -/+ 2 * ATR(14)
 ATR_STOP_MULT_HIVOL = 2.5    # wider stop for Clenow-style trend rides
-MIN_RR = 2.5                 # minimum reward:risk for a tradeable setup
+ATR_STOP_MULT_DYNAMIC = 1.5  # volatility-adjusted dynamic stop: entry -/+ 1.5 * ATR(14)
+MIN_RR = 2.5                 # minimum reward:risk for a Core (trend) setup
+MIN_RR_TACTICAL = 2.0        # minimum reward:risk for the dynamic-ATR tactical model
 PCT_FALLBACK = 0.05          # used only when ATR cannot be computed
 
 
@@ -83,6 +85,37 @@ def min_rr_target(
     cents = raw * 100.0
     rounded = math.ceil(cents) if direction == "LONG" else math.floor(cents)
     return rounded / 100.0
+
+
+def dynamic_atr_trade(
+    entry: float,
+    atr14: float | None,
+    *,
+    stop_mult: float = ATR_STOP_MULT_DYNAMIC,
+    rr: float = MIN_RR_TACTICAL,
+    direction: Direction = "LONG",
+) -> dict[str, float]:
+    """Volatility-adjusted trade geometry — the dynamic-ATR risk model.
+
+    Replaces the old static 2.50 R:R with a per-ticker, volatility-scaled plan:
+
+      * ``stop_loss``  = entry - (stop_mult * ATR)   for LONG  (default 1.5 * ATR)
+      * ``take_profit``= priced to hold a minimum ``rr`` R:R against that stop
+                         (default 2.0 R), reward-preserving cent-rounding.
+
+    When ATR is missing/NaN/zero, ``atr_stop`` degrades to the percent fallback,
+    so this never raises and always returns a coherent plan. The realised R:R
+    (``rr_realized``) is returned so callers can gate on it directly.
+    """
+    stop = atr_stop(entry, atr14, mult=stop_mult, direction=direction)
+    target = min_rr_target(entry, stop, rr=rr, direction=direction)
+    return {
+        "entry": round(float(entry), 2),
+        "stop_loss": stop,
+        "take_profit": target,
+        "atr": round(float(atr14), 4) if _atr_valid(atr14) else float("nan"),
+        "rr_realized": round(reward_risk(entry, stop, target), 3),
+    }
 
 
 def reward_risk(entry: float, stop: float, target: float) -> float:

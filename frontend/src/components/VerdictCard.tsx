@@ -327,6 +327,22 @@ export function VerdictCard({
           {v.historical_stats_display && (
             <ReliabilityBadge display={v.historical_stats_display} prominent={expanded} />
           )}
+          {v.time_horizon && (
+            <span
+              className="rounded-md border border-sky-500/50 bg-sky-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-300 sm:text-[11px]"
+              title={v.time_horizon === "Tactical" ? "1-5 day hold" : "~30 day trend hold"}
+            >
+              {v.time_horizon}
+            </span>
+          )}
+          {typeof v.volatility_atr === "number" && (
+            <span
+              className="rounded-md border border-slate-600/60 bg-slate-800/60 px-2 py-0.5 font-mono text-[10px] text-slate-300 sm:text-[11px]"
+              title="Daily ATR(14) — volatility used for dynamic stop sizing"
+            >
+              ATR {fmt(v.volatility_atr)}
+            </span>
+          )}
           <span
             className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase sm:text-[11px] ${riskBadge[v.risk_tier]}`}
           >

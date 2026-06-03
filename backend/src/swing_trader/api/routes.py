@@ -20,6 +20,7 @@ from ..engine.signal_generator import (
     latest_open_signals,
     latest_verdicts,
 )
+from ..engine.tactical_engine import generate_tactical
 from ..schemas import RegimeContext, Verdict
 
 router = APIRouter(prefix="/api", tags=["api"])
@@ -177,6 +178,28 @@ def verdicts_run(bg: BackgroundTasks) -> dict:
     """Trigger a fresh verdict computation in the background."""
     bg.add_task(generate_verdicts)
     return {"status": "started"}
+
+
+@router.get("/tactical")
+def tactical_all(setup: str | None = None) -> dict:
+    """Tactical Swings (1-5 day) screener cards.
+
+    Scans the universe on-demand for short-term setups (RSI exhaustion,
+    inside-day breakout, ...). Optional ``?setup=T1_rsi_exhaustion`` filter.
+    Every card carries ``time_horizon='Tactical'`` and ``volatility_atr``.
+    """
+    result = generate_tactical(only_fired=True)
+    cards = result["cards"]
+    if setup:
+        cards = [c for c in cards if c["setup_id"] == setup]
+    return {
+        "count": len(cards),
+        "as_of": result["finished_at"],
+        "regime_filter": result["regime_filter"],
+        "n_scanned": result["n_scanned"],
+        "errors": result["errors"],
+        "cards": cards,
+    }
 
 
 @router.get("/news")
