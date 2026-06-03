@@ -23,6 +23,12 @@ a **verdict per ticker**: `BUY`, `WATCH`, `AVOID`, or `NO_SETUP`. Every verdict 
 
 The user reads, decides, and (if they want) places trades themselves elsewhere. The site never touches their money.
 
+**Two horizons.** Alongside the long-term **Core Swing** verdicts (~30-day trend holds), a
+**Tactical Swings** book scans for short-term **1–5 day** setups — *3-Day RSI Exhaustion* and
+*Inside Day Breakout* (regime-gated on `Price > 200 SMA`). Risk levels use a **dynamic ATR model**
+(`stop = entry − 1.5×ATR(14)`, targets at min **2.0 R:R**). Toggle Core / Tactical in the dashboard
+header; the API exposes tactical cards at `GET /api/tactical`.
+
 ## What it does NOT do
 
 - ❌ Connect to brokers, exchanges, or trading APIs

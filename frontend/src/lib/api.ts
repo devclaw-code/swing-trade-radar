@@ -15,6 +15,7 @@ export const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === "1";
 // ------------------------------------------------------------
 
 export type VerdictKind = "BUY" | "WATCH" | "AVOID" | "NO_SETUP";
+export type TimeHorizon = "Core" | "Tactical";
 export type RiskTier = "LOW" | "MEDIUM" | "HIGH";
 export type VixTermStructure = "contango" | "backwardation" | "flat";
 
@@ -79,6 +80,8 @@ export interface Verdict {
   conviction: number;
   primary_setup: string | null;
   supporting_setups: string[];
+  time_horizon?: TimeHorizon;
+  volatility_atr?: number | null;
   entry_zone: PriceMethod | null;
   stop_loss: StopLoss | null;
   target: TargetSpec | null;
@@ -270,6 +273,42 @@ export interface VerdictsResponse {
   passed?: Verdict[];
   marginal?: MarginalVerdict[];
   filtered_out?: FilteredVerdict[];
+}
+
+// --- Tactical Swings (1-5 day horizon) ------------------------------------
+export interface TacticalEntryZone {
+  price: number | null;
+  type: string; // "market" | "stop"
+}
+export interface TacticalLevel {
+  price: number | null;
+  rr?: number | null;
+}
+export interface TacticalCard {
+  ticker: string;
+  as_of: string;
+  time_horizon: "Tactical";
+  setup_id: string;
+  setup_name: string;
+  score: number;
+  headline: string;
+  entry_zone: TacticalEntryZone;
+  stop_loss: TacticalLevel;
+  target: TacticalLevel;
+  max_hold: string;
+  volatility_atr: number | null;
+  risk_tier: RiskTier;
+  regime_filter: string;
+  evidence: EvidenceItem[];
+  invalidation_conditions: string[];
+}
+export interface TacticalResponse {
+  count: number;
+  generated_at: string;
+  regime_filter: string;
+  n_scanned: number;
+  errors: number;
+  cards: TacticalCard[];
 }
 
 export type FilterMode = "all" | "conservative";

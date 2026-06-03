@@ -9,11 +9,14 @@ import {
   type MarginalVerdict,
   type RegimeResponse,
   swrFetcher,
+  type TacticalResponse,
+  type TimeHorizon,
   type Verdict,
   type VerdictKind,
   type VerdictsResponse,
 } from "@/lib/api";
 import { RegimeCard } from "./RegimeCard";
+import { TacticalCard } from "./TacticalCard";
 import { VerdictCard } from "./VerdictCard";
 
 type VerdictFilter = "all" | "BUY" | "WATCH" | "AVOID_NO_SETUP";
@@ -27,6 +30,7 @@ const VERDICT_ORDER: Record<VerdictKind, number> = {
 };
 
 const MODE_STORAGE_KEY = "str.mode";
+const HORIZON_STORAGE_KEY = "str.horizon";
 
 interface Props {
   initialVerdicts: VerdictsResponse;
@@ -76,6 +80,32 @@ export function Dashboard({ initialVerdicts, initialRegime, initialUpdated }: Pr
       /* ignore */
     }
   };
+
+  // Core (30-day trend) vs Tactical (1-5 day) horizon toggle.
+  const [horizon, setHorizon] = useState<TimeHorizon>("Core");
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(HORIZON_STORAGE_KEY);
+      if (stored === "Core" || stored === "Tactical") setHorizon(stored);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  const setHorizonPersisted = (h: TimeHorizon) => {
+    setHorizon(h);
+    try {
+      window.localStorage.setItem(HORIZON_STORAGE_KEY, h);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  // Tactical cards are fetched only when the Tactical horizon is active.
+  const { data: tacticalData } = useSWR<TacticalResponse>(
+    horizon === "Tactical" ? "/api/tactical" : null,
+    swrFetcher,
+    { refreshInterval: 60_000, revalidateOnFocus: false },
+  );
 
   const verdictsUrl = mode === "conservative" ? "/api/verdicts?mode=conservative" : "/api/verdicts";
 
@@ -138,10 +168,8 @@ export function Dashboard({ initialVerdicts, initialRegime, initialUpdated }: Pr
     return c;
   }, [baseList]);
 
-  return (
+  const coreView = (
     <div className="space-y-6">
-      <RegimeCard regime={regime} asOf={asOf} />
-
       {/* Mode toggle */}
       <div className="flex flex-col gap-2 rounded-lg border border-slate-700/60 bg-slate-900 p-2 sm:flex-row sm:items-center sm:gap-3 sm:p-3">
         <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
@@ -292,6 +320,59 @@ export function Dashboard({ initialVerdicts, initialRegime, initialUpdated }: Pr
         Auto-refresh every 60s · Last server version{" "}
         <span className="font-mono text-slate-400">{initialUpdated?.version ?? 0}</span>
       </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <RegimeCard regime={regime} asOf={asOf} />
+
+      {/* Horizon toggle: Core (30-day) vs Tactical (1-5 day) */}
+      <div className="flex flex-col gap-2 rounded-lg border border-slate-700/60 bg-slate-900 p-2 sm:flex-row sm:items-center sm:gap-3 sm:p-3">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+          Horizon
+        </span>
+        <div className="flex gap-1.5 sm:gap-2">
+          <button
+            type="button"
+            onClick={() => setHorizonPersisted("Core")}
+            className={pillClass(horizon === "Core")}
+            title="Long-term trend swings (~30-day hold)"
+          >
+            Core
+          </button>
+          <button
+            type="button"
+            onClick={() => setHorizonPersisted("Tactical")}
+            className={pillClass(horizon === "Tactical")}
+            title="Short-term setups (1-5 day hold): RSI exhaustion, inside-day breakout"
+          >
+            Tactical
+          </button>
+        </div>
+        {horizon === "Tactical" && (
+          <span className="text-[11px] text-slate-400 sm:ml-2">
+            <span className="font-mono text-sky-300">{tacticalData?.count ?? 0}</span> tactical
+            setups · regime: {tacticalData?.regime_filter ?? "Price > 200 SMA"}
+          </span>
+        )}
+      </div>
+
+      {horizon === "Tactical" ? (
+        (tacticalData?.cards.length ?? 0) === 0 ? (
+          <div className="rounded-lg border border-slate-700/60 bg-slate-900 p-10 text-center text-slate-400">
+            {tacticalData ? "No tactical setups firing right now." : "Scanning tactical setups…"}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:gap-5 lg:grid-cols-2 xl:grid-cols-3">
+            {(tacticalData?.cards ?? []).map((c) => (
+              <TacticalCard key={`${c.ticker}-${c.setup_id}`} c={c} />
+            ))}
+          </div>
+        )
+      ) : (
+        coreView
+      )}
     </div>
   );
 }

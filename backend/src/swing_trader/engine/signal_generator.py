@@ -475,6 +475,11 @@ def generate_verdicts(
 
             # Latest-bar enrichment for UI header.
             try:
+                # Core trend verdicts are the long-horizon book.
+                verdict.time_horizon = "Core"
+                from .atr import compute_atr14
+                atr_val = compute_atr14(df)
+                verdict.volatility_atr = round(atr_val, 4) if atr_val is not None else None
                 closes = df["close"].dropna()
                 if len(closes) >= 1:
                     last_close = float(closes.iloc[-1])

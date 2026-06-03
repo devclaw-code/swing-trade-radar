@@ -189,6 +189,35 @@ SHORT variants are symmetric (swap conditions).
 
 ---
 
+## 4a. Tactical Swings module (1–5 day holds)
+
+A second, short-term screener book that runs **alongside** the Core (30-day)
+verdicts. Every verdict/card carries a `time_horizon` field (`"Core"` |
+`"Tactical"`) plus a `volatility_atr` (latest daily ATR(14)) for
+volatility-adjusted sizing and UI display.
+
+**Code layout**
+- `engine/atr.py` — standalone Wilder ATR(14) (`compute_atr14`), NaN/short-history safe.
+- `engine/risk_levels.py::dynamic_atr_trade()` — the **Dynamic ATR Risk** model:
+  `stop = entry - 1.5*ATR`, `take_profit` priced to **min 2.0 R:R** (replaces the
+  old static 2.50 target). Degrades to a percent stop when ATR is missing.
+- `strategies/tactical/` — `TacticalStrategy` base + one file per setup. Adding a
+  new setup = one file + one line in `engine/tactical_engine.py`.
+- `engine/tactical_engine.py` — universe scanner (`generate_tactical`), serves `/api/tactical`.
+
+**Shared regime gate (all tactical setups):** `Price > SMA(200)`.
+
+| ID | Setup | Entry | Stop | Exit / invalidation |
+|---|---|---|---|---|
+| `T1_rsi_exhaustion` | **3-Day RSI Exhaustion** | 3 consecutive lower closes AND `RSI(4) < 30` → market entry at close | `entry - 1.5*ATR` (dynamic) | first profitable close, or `RSI(4) > 55`; hard stop; max 5 days |
+| `T2_inside_day_breakout` | **Inside Day Breakout** | inside day (`H<prevH` & `L>prevL`) AND `EMA(10)` rising → **buy-stop** at `inside_high + $0.10` | `inside_low - $0.05` (structural, ATR-floored at 1.5×ATR) | min 2.0 R:R target; no-fill if stop never tagged; max 5 days |
+
+RSI(4) and EMA(10) are computed on-the-fly inside each setup (not part of the
+shared `enrich()` pass). All setups wrap evaluation in `try/except` and return a
+clean *not-fired* result on NaN/short-history/malformed bars.
+
+---
+
 ## 5. Backtesting
 
 ### 5.1 Engine (`engine/backtester.py`)
@@ -284,6 +313,7 @@ All under `/api`. JSON only.
 | GET | `/market-summary` | `{ sp500, ndx, vix, ts }` (also from yfinance: `^GSPC`, `^NDX`, `^VIX`) |
 | GET | `/backtest/{strategy}` | Cached backtest metrics per ticker + aggregate. |
 | POST | `/backtest/run` | Trigger full backtest (background task). |
+| GET | `/tactical` | **Tactical Swings (1–5 day) cards.** On-demand universe scan. Query: `setup` (e.g. `T1_rsi_exhaustion`). Each card has `time_horizon:"Tactical"` + `volatility_atr`. |
 | GET | `/health` | Liveness. |
 
 **Example response — `GET /strategies`:**
