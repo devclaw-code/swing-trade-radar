@@ -64,14 +64,15 @@ def run_refresh_pipeline() -> dict:
     # on a manual POST /api/verdicts/run and silently freeze at the last run.
     try:
         verdict_summary = generate_verdicts()
-        errors += verdict_summary.get("errors", 0)
+        verdict_errors = verdict_summary.get("errors", 0)
         n_verdicts = verdict_summary.get("n_verdicts", 0)
         log.info("verdicts synthesized: %d", n_verdicts)
     except Exception as e:
         log.exception("verdict generation failed: %s", e)
-        errors += 1
+        verdict_errors = 1
         n_verdicts = 0
         verdict_summary = {}
+    errors += verdict_errors
 
     # Bump version + close run row.
     from datetime import UTC
@@ -90,7 +91,7 @@ def run_refresh_pipeline() -> dict:
                     "signals": summary,
                     "verdicts": {
                         "n": n_verdicts,
-                        "errors": verdict_summary.get("errors", 0),
+                        "errors": verdict_errors,
                     },
                 }
             )[:4000]
