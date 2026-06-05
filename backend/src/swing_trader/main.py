@@ -14,7 +14,7 @@ from .config import settings
 from .data.db import Meta, Run, init_db, session_scope
 from .data.news_scraper import scrape_all as scrape_news
 from .data.price_fetcher import fetch_all
-from .engine.signal_generator import generate_all
+from .engine.signal_generator import generate_all, generate_verdicts
 
 logging.basicConfig(
     level=logging.INFO,
@@ -59,6 +59,21 @@ def run_refresh_pipeline() -> dict:
         n_signals = 0
         summary = {}
 
+    # Synthesize + persist per-ticker verdicts off the freshly-fetched prices.
+    # Without this the verdict cards the UI reads (/api/verdicts) only refresh
+    # on a manual POST /api/verdicts/run and silently freeze at the last run.
+    try:
+        verdict_summary = generate_verdicts()
+        verdict_errors = verdict_summary.get("errors", 0)
+        n_verdicts = verdict_summary.get("n_verdicts", 0)
+        log.info("verdicts synthesized: %d", n_verdicts)
+    except Exception as e:
+        log.exception("verdict generation failed: %s", e)
+        verdict_errors = 1
+        n_verdicts = 0
+        verdict_summary = {}
+    errors += verdict_errors
+
     # Bump version + close run row.
     from datetime import UTC
     from datetime import datetime as _dt
@@ -70,7 +85,15 @@ def run_refresh_pipeline() -> dict:
             run.n_signals = n_signals
             run.errors = errors
             run.log_summary = str(
-                {"fetched": fetched, "news": news_summary, "signals": summary}
+                {
+                    "fetched": fetched,
+                    "news": news_summary,
+                    "signals": summary,
+                    "verdicts": {
+                        "n": n_verdicts,
+                        "errors": verdict_errors,
+                    },
+                }
             )[:4000]
         v = s.get(Meta, "version")
         if v is None:
