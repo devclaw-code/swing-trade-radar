@@ -154,8 +154,8 @@ r ∈ {0.236, 0.382, 0.500, 0.618, 0.786}
 
 - `engine/indicators.py` computes `pivot_high_20` / `pivot_low_20` (20-day rolling max/min), `atr14`, `vol_sma20`, and (per grep) `bb_*`, `rsi`, MAs.
 - `strategies/sr_breakout.py` already **trades** 20-day pivot breakouts with volume confirmation. ← S/R as a *trigger*. We are **not** changing its trade logic.
-- `engine/risk_levels.py` is the single source of truth for ATR-based stop/target geometry (`atr_stop`, `floor_stop_with_atr`, `min_rr_target`). Reuse its `_atr_valid` predicate + `PCT_FALLBACK` constant for the tolerance band.
-- `schemas.py` already has `PriceLevel{price, method}`, `StopLevel`, `TargetLevel`, and the verdict carries `entry_zone` / `stop_loss` / `target` plus a latest-bar `price`.
+- `engine/risk_levels.py` is the single source of truth for ATR-based stop/target geometry (`atr_stop`, `floor_stop_with_atr`, `min_rr_target`, `dynamic_atr_trade`). Reuse its `_atr_valid` predicate + `PCT_FALLBACK` constant for the tolerance band.
+- `schemas.py` already has `PriceLevel{price, method}`, `StopLevel`, `TargetLevel`, and the verdict carries `entry_zone` / `stop_loss` / `target`, a latest-bar `price`, `volatility_atr`, and `time_horizon` (typed `Literal["Core", "Tactical"]`).
 
 ### 4.2 New: `engine/sr_levels.py`
 
@@ -199,9 +199,7 @@ levels: list[SRLevel] = Field(default_factory=list,
 
 ### 4.4 Wiring point
 
-Call `compute_sr_levels(...)` in the verdict synthesizer (where `entry_zone`/`price` are already populated), passing the latest `price`, the latest-bar `atr14` (from the enriched df), and a `horizon` argument. Attach the result to `verdict.levels`. One call site; no strategy code touched.
-
-> **Note on `horizon`:** the current `Verdict` schema has no horizon field, so the caller passes `"Core"`/`"Tactical"` explicitly (e.g. derived from which sleeve fired). If a `time_horizon` field is later added to the verdict, wire it through here instead.
+Call `compute_sr_levels(...)` in the verdict synthesizer (where `volatility_atr` / `entry_zone` / `price` are already populated), passing the latest `price`, the latest-bar `atr14`, and the verdict's `time_horizon` straight through as `horizon` (the field is already typed `Literal["Core", "Tactical"]`, matching the param). Attach the result to `verdict.levels`. One call site; no strategy code touched.
 
 ### 4.5 Frontend (separate follow-up PR)
 

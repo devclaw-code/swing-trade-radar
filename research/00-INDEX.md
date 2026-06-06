@@ -24,7 +24,7 @@
 | 06 | [`06-implementation-stack.md`](./06-implementation-stack.md) | 1370 | Claude Opus 4.7 | Data sources, broker APIs, Python ecosystem, storage, signal pipeline, alerting, safety rails, deployment, **sub-$50/mo recommended stack**. |
 | 07 | [`07-skeptical-perspective.md`](./07-skeptical-perspective.md) | 1219 | Claude Opus 4.7 | The contrarian view: EMH, edge decay, overfitting math, retail-trader behavioral evidence, concentration risk, passive flows eating alpha, anti-patterns. |
 | 08 | [`08-institutional-playbook.md`](./08-institutional-playbook.md) | 1313 | Gemini 3 Pro | How pod shops actually run mega-cap tech books: sell-side signals, cross-asset, pairs/stat-arb, vol targeting, options spreads, multi-sleeve construction. Retail-adapted checklist. |
-| 09 | [`09-support-resistance.md`](./09-support-resistance.md) | 271 | Claude Opus 4.8 | S/R methods (swing fractals, classic + Fib pivots, Fib retracement) with formulas + confluence/clustering algo, **plus a concrete design spec** for a ranked S/R map (`levels[]`) on every suggested trade. |
+| 09 | [`09-support-resistance.md`](./09-support-resistance.md) | 269 | Claude Opus 4.8 | S/R methods (swing fractals, classic + Fib pivots, Fib retracement) with formulas + confluence/clustering algo, **plus a concrete design spec** for a ranked S/R map (`levels[]`) on every suggested trade. |
 
 ---
 
