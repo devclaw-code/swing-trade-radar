@@ -52,19 +52,29 @@ A **swing high** at bar *i* = `high[i]` strictly greater than the highs of `N` b
 
 ```python
 def swing_points(high, low, n=3):
-    """Return indices of swing highs and swing lows (fractal definition)."""
+    """Positional indices of *strict* swing highs/lows (fractal definition).
+
+    Inputs are coerced to numpy arrays so indexing is positional — passing a
+    pandas Series with a datetime index would otherwise make `high[i]` a
+    label lookup (wrong bar / KeyError). The center bar must be a *unique*
+    extremum in its window so a plateau (equal high to the right) is NOT
+    counted as a swing.
+    """
+    high = np.asarray(high, dtype=float)
+    low = np.asarray(low, dtype=float)
     sh, sl = [], []
     for i in range(n, len(high) - n):
         win_h = high[i - n : i + n + 1]
         win_l = low[i - n : i + n + 1]
-        if high[i] == win_h.max() and (win_h.argmax() == n):
+        # strict: center is the sole max/min in the window
+        if high[i] == win_h.max() and (win_h == high[i]).sum() == 1:
             sh.append(i)
-        if low[i] == win_l.min() and (win_l.argmin() == n):
+        if low[i] == win_l.min() and (win_l == low[i]).sum() == 1:
             sl.append(i)
     return sh, sl
 ```
 
-> **Note:** the last `N` bars can't be confirmed swings yet (look-ahead). That's fine — confirmed historical pivots are what we plot. Never "peek" the right edge.
+> **Note:** the last `N` bars can't be confirmed swings yet (look-ahead). That's fine — confirmed historical pivots are what we plot. Never "peek" the right edge. Coerce to numpy first; never index a datetime-indexed Series positionally.
 
 **Strength = touch count.** After detecting raw pivots, cluster nearby ones (§3). A zone touched 4 times is far stronger than one touched once. This single signal carries most of the predictive weight.
 
@@ -144,8 +154,8 @@ r ∈ {0.236, 0.382, 0.500, 0.618, 0.786}
 
 - `engine/indicators.py` computes `pivot_high_20` / `pivot_low_20` (20-day rolling max/min), `atr14`, `vol_sma20`, and (per grep) `bb_*`, `rsi`, MAs.
 - `strategies/sr_breakout.py` already **trades** 20-day pivot breakouts with volume confirmation. ← S/R as a *trigger*. We are **not** changing its trade logic.
-- `engine/risk_levels.py` is the single source of truth for ATR-based stop/target geometry (`atr_stop`, `floor_stop_with_atr`, `min_rr_target`, `dynamic_atr_trade`). Reuse its `_atr_valid` + ATR access for the tolerance band.
-- `schemas.py` already has `PriceLevel{price, method}`, `StopLevel`, `TargetLevel`, and the verdict carries `entry_zone` / `stop_loss` / `target` / `volatility_atr`.
+- `engine/risk_levels.py` is the single source of truth for ATR-based stop/target geometry (`atr_stop`, `floor_stop_with_atr`, `min_rr_target`). Reuse its `_atr_valid` predicate + `PCT_FALLBACK` constant for the tolerance band.
+- `schemas.py` already has `PriceLevel{price, method}`, `StopLevel`, `TargetLevel`, and the verdict carries `entry_zone` / `stop_loss` / `target` plus a latest-bar `price`.
 
 ### 4.2 New: `engine/sr_levels.py`
 
@@ -165,7 +175,7 @@ def compute_sr_levels(
     nearest `max_per_side` supports below and resistances above `price`."""
 ```
 
-Properties: **pure & deterministic** (testable), **no right-edge look-ahead**, **degrades gracefully** when ATR is NaN (fall back to a `0.75%` band, mirroring `PCT_FALLBACK` in `risk_levels.py`).
+Properties: **pure & deterministic** (testable), **no right-edge look-ahead**, **degrades gracefully** when ATR is NaN (fall back to a percent-of-price band using `PCT_FALLBACK` from `risk_levels.py` — currently `0.05`, i.e. 5%).
 
 ### 4.3 New schema field
 
@@ -189,7 +199,9 @@ levels: list[SRLevel] = Field(default_factory=list,
 
 ### 4.4 Wiring point
 
-Call `compute_sr_levels(...)` in the verdict synthesizer (where `volatility_atr`/`entry_zone` are already populated), passing the latest `price`, `atr14`, and the verdict's `time_horizon`. Attach the result to `verdict.levels`. One call site; no strategy code touched.
+Call `compute_sr_levels(...)` in the verdict synthesizer (where `entry_zone`/`price` are already populated), passing the latest `price`, the latest-bar `atr14` (from the enriched df), and a `horizon` argument. Attach the result to `verdict.levels`. One call site; no strategy code touched.
+
+> **Note on `horizon`:** the current `Verdict` schema has no horizon field, so the caller passes `"Core"`/`"Tactical"` explicitly (e.g. derived from which sleeve fired). If a `time_horizon` field is later added to the verdict, wire it through here instead.
 
 ### 4.5 Frontend (separate follow-up PR)
 
@@ -233,7 +245,7 @@ Reading: strong resistance ~\$171.4 (three swing touches + a pivot + round numbe
 - **Zones, not lines.** Always ≥0.5×ATR wide; the UI must render bands, not hairlines, so users don't over-trust an exact price.
 - **No look-ahead.** Right-edge unconfirmed swings excluded; pivots use only prior-period closed data. Enforced by a unit test that feeds a truncated df and asserts no future bar influences output.
 - **Graceful degradation.** NaN/zero ATR ⇒ percent-band fallback, never a crash (mirrors `risk_levels.py`).
-- **Calibrate, don't assert.** Strength weights are starting guesses; tune against the walk-forward harness (`04`/`W5`) before trusting them in the score blend. Until calibrated, `levels` is **display-only** and does **not** feed the numeric conviction score.
+- **Calibrate, don't assert.** Strength weights are starting guesses; tune against the walk-forward harness (`04`/`05`) before trusting them in the score blend. Until calibrated, `levels` is **display-only** and does **not** feed the numeric conviction score.
 
 ---
 
