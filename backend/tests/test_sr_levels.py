@@ -218,3 +218,27 @@ def test_tactical_vs_core_horizon_both_run():
     core = compute_sr_levels(df, price=100.0, atr14=1.0, horizon="Core")
     tac = compute_sr_levels(df, price=100.0, atr14=1.0, horizon="Tactical")
     assert isinstance(core, list) and isinstance(tac, list)
+
+def test_cluster_span_bound_synthetic_dense_ladder():
+    """Assert that a dense chain of candidates is split if its span exceeds max_span."""
+    from swing_trader.engine.sr_levels import _Candidate, _cluster
+    
+    # Simulating ATR=4.38, band=2.19, max_span=6.57
+    band = 2.19
+    max_span = 6.57
+    cands = []
+    prices = [110.0 + i*2.0 for i in range(8)]
+    for p in prices:
+        cands.append(_Candidate(price=p, source="test", is_touch=False, age_bars=1, golden=False))
+    
+    clusters = _cluster(cands, band=band, max_span=max_span)
+    
+    # First cluster: 110, 112, 114, 116 (span 6.0 <= 6.57)
+    # 118 would make span 8.0 > 6.57, so it starts a new cluster
+    # Second cluster: 118, 120, 122, 124 (span 6.0 <= 6.57)
+    assert len(clusters) == 2
+    assert [c.price for c in clusters[0]] == [110.0, 112.0, 114.0, 116.0]
+    assert [c.price for c in clusters[1]] == [118.0, 120.0, 122.0, 124.0]
+    
+    for cluster in clusters:
+        assert (cluster[-1].price - cluster[0].price) <= max_span

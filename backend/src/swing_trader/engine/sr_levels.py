@@ -37,6 +37,7 @@ FIB_RATIOS: tuple[float, ...] = (0.236, 0.382, 0.500, 0.618, 0.786)
 # Fib levels traders defend hardest get a touch-equivalent weight bonus.
 FIB_GOLDEN: frozenset[float] = frozenset({0.500, 0.618})
 BAND_ATR_MULT = 0.5  # cluster tolerance = 0.5 * ATR(14)
+SPAN_ATR_MULT = 1.5  # max cluster span = 1.5 * ATR(14)
 
 # Score blend weights (sum ~= 1.0).
 W_TOUCH = 0.45
@@ -216,23 +217,25 @@ def _band_width(price: float, atr14: float | None) -> float:
     return PCT_FALLBACK * abs(price)
 
 
-def _cluster(cands: list[_Candidate], band: float) -> list[list[_Candidate]]:
-    """Greedy single-linkage clustering by price within ``band``.
+def _cluster(cands: list[_Candidate], band: float, max_span: float) -> list[list[_Candidate]]:
+    """Greedy single-linkage clustering by price within ``band``, bounded by ``max_span``.
 
     Each candidate links to the *previous* one in price order, so a chain of
     candidates each within ``band`` of its neighbour stays in one cluster even
     when the chain's overall span exceeds ``band`` (true single-linkage). The
-    break uses the last-added member as the anchor, not the cluster's first
-    member, otherwise long confluence chains would be split prematurely.
+    break uses the last-added member as the anchor. To prevent dense ladders
+    from merging into a single massive zone, a link is rejected if it would push
+    the cluster's total width (highest - lowest) strictly above ``max_span``.
     """
     if not cands:
         return []
     ordered = sorted(cands, key=lambda c: c.price)
     clusters: list[list[_Candidate]] = [[ordered[0]]]
     for c in ordered[1:]:
-        anchor = clusters[-1][-1].price  # last-added member (single-linkage)
-        if abs(c.price - anchor) <= band:
-            clusters[-1].append(c)
+        cluster = clusters[-1]
+        anchor = cluster[-1].price  # last-added member (single-linkage)
+        if abs(c.price - anchor) <= band and abs(c.price - cluster[0].price) <= max_span:
+            cluster.append(c)
         else:
             clusters.append([c])
     return clusters
@@ -388,7 +391,8 @@ def compute_sr_levels(
         return []
 
     band = _band_width(price, atr14)
-    clusters = _cluster(cands, band)
+    max_span = band * (SPAN_ATR_MULT / BAND_ATR_MULT)
+    clusters = _cluster(cands, band, max_span)
 
     # Zones essentially *at* the current price are neither support nor
     # resistance; drop anything within a tiny epsilon so distance_pct != 0.
