@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import type {
   EvidenceItem,
@@ -82,6 +83,59 @@ function sanitizeNote(note: string | null | undefined): string {
 const CONVICTION_TOOLTIP =
   "Conviction score: percentage of strategy sub-conditions that fired. 100% = all checks passed. Lower scores indicate partial or conflicting signals.";
 
+// Click/tap-to-toggle info tooltip. The native `title` attribute never shows
+// on touch devices and only appears on hover after a delay on desktop, so the
+// old ℹ button looked dead. This works on both desktop and mobile.
+function InfoTip({ label, text }: { label: string; text: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+  const tipId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+    function onDocClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <span ref={ref} className="relative inline-flex">
+      <button
+        type="button"
+        aria-label={label}
+        aria-expanded={open}
+        aria-controls={tipId}
+        aria-describedby={open ? tipId : undefined}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
+        className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border border-slate-600 text-[10px] font-bold text-slate-400 hover:border-sky-400 hover:text-sky-300 focus:border-sky-400 focus:text-sky-300 focus:outline-none"
+      >
+        ℹ
+      </button>
+      {open && (
+        <span
+          id={tipId}
+          role="tooltip"
+          className="absolute bottom-full left-1/2 z-50 mb-2 w-64 -translate-x-1/2 rounded-lg border border-slate-700 bg-slate-900 p-3 text-left text-xs font-normal leading-relaxed text-slate-200 shadow-xl shadow-black/40"
+        >
+          {text}
+        </span>
+      )}
+    </span>
+  );
+}
+
 // S3 (Connors RSI-2) currently backtests with a negative Sharpe; flag it on
 // any card where it is the primary setup.
 function isS3Primary(setup: string | null | undefined): boolean {
@@ -119,14 +173,7 @@ function ConvictionBar({ value }: { value: number }) {
         <div className={`h-full ${tone}`} style={{ width: `${v * 100}%` }} />
       </div>
       <span className="font-mono text-xs font-semibold text-slate-300">{pctVal}%</span>
-      <button
-        type="button"
-        aria-label="Conviction score explanation"
-        title={CONVICTION_TOOLTIP}
-        className="inline-flex h-4 w-4 cursor-help select-none items-center justify-center rounded-full border border-slate-600 text-[10px] font-bold text-slate-400 hover:border-sky-400 hover:text-sky-300 focus:border-sky-400 focus:text-sky-300 focus:outline-none"
-      >
-        ℹ
-      </button>
+      <InfoTip label="Conviction score explanation" text={CONVICTION_TOOLTIP} />
     </div>
   );
 }
