@@ -493,6 +493,20 @@ def generate_verdicts(
             except Exception as e:
                 log.warning("sparkline/price enrich failed for %s: %s", ticker, e)
 
+            # Ranked support/resistance map for the UI (display-only; does not
+            # affect conviction/score). Pure function, fails soft.
+            try:
+                if verdict.price is not None:
+                    from .sr_levels import compute_sr_levels
+                    verdict.levels = compute_sr_levels(
+                        df,
+                        price=float(verdict.price),
+                        atr14=verdict.volatility_atr,
+                        horizon=verdict.time_horizon,
+                    )
+            except Exception as e:
+                log.warning("sr-levels enrich failed for %s: %s", ticker, e)
+
             # Attach sanity flags collected during enrich step.
             verdict.sanity_flags = sanity_by_ticker.get(ticker, [])
 

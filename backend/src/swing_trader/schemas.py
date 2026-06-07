@@ -113,6 +113,40 @@ class TargetLevel(PriceLevel):
     rr: float | None = None
 
 
+class SRLevel(PriceLevel):
+    """A ranked support/resistance zone near the current price.
+
+    Inherits `price` (the zone's representative price) and `method` from
+    `PriceLevel`. Produced by `engine.sr_levels.compute_sr_levels`. Display-only
+    for now — does NOT feed the numeric conviction/score until the strength
+    weights are calibrated against the walk-forward harness.
+    """
+
+    kind: Literal["support", "resistance"]
+    strength: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Confluence score 0..1 (touches + distinct-method agreement + "
+            "recency + psychological round-number bonus)."
+        ),
+    )
+    distance_pct: float = Field(
+        ..., description="Signed % from current price (negative = below, i.e. support)."
+    )
+    sources: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Method tags that voted for this zone, e.g. "
+            '["swing_low", "classic_pivot_S1", "fib_retr_0.618"].'
+        ),
+    )
+    touches: int = Field(
+        default=0, ge=0, description="Number of historical swing touches in the zone."
+    )
+
+
 class ScoreComponent(BaseModel):
     """One component of the transparent score breakdown.
 
@@ -201,6 +235,14 @@ class Verdict(BaseModel):
     stop_loss: StopLevel | None = None
     target: TargetLevel | None = None
     max_hold: str = ""
+
+    levels: list[SRLevel] = Field(
+        default_factory=list,
+        description=(
+            "Ranked support/resistance zones near price: up to 3 supports below + "
+            "3 resistances above. Display-only; does not affect conviction/score."
+        ),
+    )
 
     position_size_hint: str = ""
 
