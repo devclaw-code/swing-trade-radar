@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import type {
   EvidenceItem,
@@ -89,6 +89,7 @@ const CONVICTION_TOOLTIP =
 function InfoTip({ label, text }: { label: string; text: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
+  const tipId = useId();
 
   useEffect(() => {
     if (!open) return;
@@ -112,6 +113,8 @@ function InfoTip({ label, text }: { label: string; text: string }) {
         type="button"
         aria-label={label}
         aria-expanded={open}
+        aria-controls={tipId}
+        aria-describedby={open ? tipId : undefined}
         onClick={(e) => {
           e.stopPropagation();
           setOpen((o) => !o);
@@ -122,6 +125,7 @@ function InfoTip({ label, text }: { label: string; text: string }) {
       </button>
       {open && (
         <span
+          id={tipId}
           role="tooltip"
           className="absolute bottom-full left-1/2 z-50 mb-2 w-64 -translate-x-1/2 rounded-lg border border-slate-700 bg-slate-900 p-3 text-left text-xs font-normal leading-relaxed text-slate-200 shadow-xl shadow-black/40"
         >
