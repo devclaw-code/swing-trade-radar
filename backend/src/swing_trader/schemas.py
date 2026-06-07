@@ -124,16 +124,27 @@ class SRLevel(PriceLevel):
 
     kind: Literal["support", "resistance"]
     strength: float = Field(
-        ..., ge=0.0, le=1.0, description="Confluence score 0..1 (touches + method agreement + recency)."
+        ...,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Confluence score 0..1 (touches + distinct-method agreement + "
+            "recency + psychological round-number bonus)."
+        ),
     )
     distance_pct: float = Field(
         ..., description="Signed % from current price (negative = below, i.e. support)."
     )
     sources: list[str] = Field(
         default_factory=list,
-        description='Methods that voted for this zone, e.g. ["swing_pivot", "fib_pivot_R1"].',
+        description=(
+            "Method tags that voted for this zone, e.g. "
+            '["swing_low", "classic_pivot_S1", "fib_retr_0.618"].'
+        ),
     )
-    touches: int = Field(default=0, ge=0, description="Number of historical swing touches in the zone.")
+    touches: int = Field(
+        default=0, ge=0, description="Number of historical swing touches in the zone."
+    )
 
 
 class ScoreComponent(BaseModel):

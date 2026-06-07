@@ -10,7 +10,8 @@ current price by stacking four methods and rewarding confluence:
   4. Fibonacci retracement        -> 23.6/38.2/50/61.8/78.6% of dominant swing
 
 Candidates within ``0.5 * ATR(14)`` of each other collapse into one zone.
-Each zone is scored 0..1 from touch count + distinct-method agreement + recency.
+Each zone is scored 0..1 from touch count + distinct-method agreement +
+recency + a psychological round-number bonus (see ``_score_zone``).
 The nearest ``max_per_side`` supports below and resistances above price are kept.
 
 This module is **display-only**: it never generates a trade and never feeds the
@@ -115,7 +116,9 @@ def fib_pivots(high: float, low: float, close: float) -> dict[str, float]:
     }
 
 
-def _prior_period_hlc(df: pd.DataFrame, horizon: Horizon) -> tuple[float, float, float] | None:
+def _prior_period_hlc(
+    df: pd.DataFrame | None, horizon: Horizon
+) -> tuple[float, float, float] | None:
     """H/L/C of the prior period: prior *week* for Core, prior *day* for Tactical.
 
     Uses only fully-closed prior data (no look-ahead): the most recent complete
@@ -149,32 +152,41 @@ def _prior_period_hlc(df: pd.DataFrame, horizon: Horizon) -> tuple[float, float,
 # 4. Fibonacci retracement of the dominant recent swing
 # ---------------------------------------------------------------------------
 def fib_retracement(
-    df: pd.DataFrame, swing_highs: list[int], swing_lows: list[int]
+    df: pd.DataFrame | None, swing_highs: list[int], swing_lows: list[int]
 ) -> list[tuple[float, str]]:
     """Retracement levels of the dominant (largest-amplitude) recent swing.
 
-    Returns ``(price, source)`` pairs. The anchor is the largest low->high (or
-    high->low) move among the most recent confirmed swing points, so the source
-    string records which Fib ratio produced the level.
+    Returns ``(price, source)`` pairs. The anchor is the swing-high/swing-low
+    pair with the largest ``|high - low|`` amplitude among the confirmed swing
+    points (not merely the most recent), so the retracement tracks the move
+    traders are actually defending. The source string records which Fib ratio
+    produced each level.
     """
-    if df is None or df.empty or (not swing_highs and not swing_lows):
+    if df is None or df.empty or not swing_highs or not swing_lows:
         return []
     highs = np.asarray(df["high"].to_numpy(), dtype=float)
     lows = np.asarray(df["low"].to_numpy(), dtype=float)
 
-    # Find the dominant swing: pair the most recent significant low and high.
-    last_high_i = swing_highs[-1] if swing_highs else None
-    last_low_i = swing_lows[-1] if swing_lows else None
-    if last_high_i is None or last_low_i is None:
+    # Dominant swing = the (high_i, low_i) pair with the largest valid amplitude.
+    best: tuple[float, int, int] | None = None  # (amplitude, high_i, low_i)
+    for hi_i in swing_highs:
+        hi = highs[hi_i]
+        if math.isnan(hi):
+            continue
+        for lo_i in swing_lows:
+            lo = lows[lo_i]
+            if math.isnan(lo) or not (hi > lo):
+                continue
+            amp = hi - lo
+            if best is None or amp > best[0]:
+                best = (amp, hi_i, lo_i)
+    if best is None:
         return []
 
+    amplitude, last_high_i, last_low_i = best
     hi = highs[last_high_i]
     lo = lows[last_low_i]
-    if not (hi > lo) or math.isnan(hi) or math.isnan(lo):
-        return []
-
-    amplitude = hi - lo
-    # Uptrend pullback support if the high is the more recent of the two.
+    # Uptrend pullback support if the dominant high is the more recent of the two.
     uptrend = last_high_i >= last_low_i
     out: list[tuple[float, str]] = []
     for r in FIB_RATIOS:
@@ -205,13 +217,20 @@ def _band_width(price: float, atr14: float | None) -> float:
 
 
 def _cluster(cands: list[_Candidate], band: float) -> list[list[_Candidate]]:
-    """Greedy single-linkage clustering by price within ``band``."""
+    """Greedy single-linkage clustering by price within ``band``.
+
+    Each candidate links to the *previous* one in price order, so a chain of
+    candidates each within ``band`` of its neighbour stays in one cluster even
+    when the chain's overall span exceeds ``band`` (true single-linkage). The
+    break uses the last-added member as the anchor, not the cluster's first
+    member, otherwise long confluence chains would be split prematurely.
+    """
     if not cands:
         return []
     ordered = sorted(cands, key=lambda c: c.price)
     clusters: list[list[_Candidate]] = [[ordered[0]]]
     for c in ordered[1:]:
-        anchor = clusters[-1][0].price
+        anchor = clusters[-1][-1].price  # last-added member (single-linkage)
         if abs(c.price - anchor) <= band:
             clusters[-1].append(c)
         else:
@@ -292,7 +311,7 @@ def _zone_price(members: list[_Candidate]) -> float:
 # Public entry point
 # ---------------------------------------------------------------------------
 def compute_sr_levels(
-    df: pd.DataFrame,
+    df: pd.DataFrame | None,
     *,
     price: float,
     atr14: float | None,
