@@ -66,6 +66,24 @@ export interface WhyBlock {
 
 export type Reliability = "high" | "medium" | "low" | "insufficient";
 
+export type SRLevelKind = "support" | "resistance";
+
+// A ranked support/resistance zone near the current price.
+// Produced by the backend `engine.sr_levels.compute_sr_levels`. Display-only:
+// it does NOT feed the numeric conviction/score (strength weights are still
+// being calibrated against the walk-forward harness).
+export interface SRLevel extends PriceMethod {
+  kind: SRLevelKind;
+  /** Confluence score 0..1 (touches + method agreement + recency + round-number bonus). */
+  strength: number;
+  /** Signed % from current price (negative = below / support, positive = above / resistance). */
+  distance_pct: number;
+  /** Method tags that voted for this zone, e.g. ["swing_low", "classic_pivot_S1"]. */
+  sources: string[];
+  /** Number of historical swing touches in the zone. */
+  touches: number;
+}
+
 export interface HistoricalStatsDisplay {
   tier: Reliability;
   sample_size: number;
@@ -101,6 +119,8 @@ export interface Verdict {
   reliability?: Reliability;
   confidence_adjusted_for_sample?: number | null;
   historical_stats_display?: HistoricalStatsDisplay | null;
+  /** Ranked support/resistance zones near price (display-only). */
+  levels?: SRLevel[];
 }
 
 export interface ScoreComponent {

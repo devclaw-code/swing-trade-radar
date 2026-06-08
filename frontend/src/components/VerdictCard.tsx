@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
+import { useEffect, useId, useRef, useState } from "react";
 import type {
   EvidenceItem,
   HistoricalStatsDisplay,
   Reliability,
   RiskTier,
   ScoreBreakdown,
+  SRLevel,
   Verdict,
   VerdictKind,
 } from "@/lib/api";
@@ -325,6 +326,109 @@ function Section({
   );
 }
 
+// Human-friendly label for the strongest method behind a zone.
+const SOURCE_LABELS: Record<string, string> = {
+  swing_high: "Swing high",
+  swing_low: "Swing low",
+  prior_week_high: "Prior-wk high",
+  prior_week_low: "Prior-wk low",
+  prior_day_high: "Prior-day high",
+  prior_day_low: "Prior-day low",
+  confluence: "Confluence",
+  round_number: "Round number",
+};
+
+function prettySource(s: string): string {
+  if (SOURCE_LABELS[s]) return SOURCE_LABELS[s];
+  if (s.startsWith("classic_pivot_")) return `Pivot ${s.slice("classic_pivot_".length)}`;
+  if (s.startsWith("fib_pivot_")) return `Fib pivot ${s.slice("fib_pivot_".length)}`;
+  if (s.startsWith("fib_retr_")) {
+    const r = Number.parseFloat(s.slice("fib_retr_".length));
+    return Number.isFinite(r) ? `Fib ${(r * 100).toFixed(1)}%` : "Fib retr";
+  }
+  return s.replace(/_/g, " ");
+}
+
+// A single S/R zone row: price, distance, strength bar, touches, top method.
+function LevelRow({ level }: { level: SRLevel }) {
+  const isSupport = level.kind === "support";
+  const pct = Math.round(Math.max(0, Math.min(1, level.strength)) * 100);
+  const barColor = isSupport ? "bg-emerald-500" : "bg-rose-500";
+  const priceColor = isSupport ? "text-emerald-300" : "text-rose-300";
+  const label = level.sources.length > 0 ? prettySource(level.sources[0]) : level.method;
+  const extra = level.sources.length > 1 ? ` +${level.sources.length - 1}` : "";
+
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <span className={`w-16 shrink-0 font-mono ${priceColor}`}>${fmt(level.price)}</span>
+      <span className="w-14 shrink-0 text-right font-mono text-slate-400">
+        {level.distance_pct >= 0 ? "+" : ""}
+        {level.distance_pct.toFixed(1)}%
+      </span>
+      <span className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800">
+        <span
+          className={`absolute inset-y-0 left-0 rounded-full ${barColor}`}
+          style={{ width: `${pct}%` }}
+        />
+      </span>
+      <span className="w-7 shrink-0 text-right font-mono text-slate-500" title="historical touches">
+        {level.touches}×
+      </span>
+      <span
+        className="hidden w-28 shrink-0 truncate text-slate-400 sm:block"
+        title={level.sources.join(", ")}
+      >
+        {label}
+        {extra}
+      </span>
+    </div>
+  );
+}
+
+// Support & resistance block: resistances above price (descending), then a
+// price marker, then supports below price (descending). Display-only.
+function LevelsBlock({ levels, price }: { levels: SRLevel[]; price?: number }) {
+  const resistances = levels
+    .filter((l) => l.kind === "resistance")
+    .sort((a, b) => b.price - a.price);
+  const supports = levels.filter((l) => l.kind === "support").sort((a, b) => b.price - a.price);
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2 px-0 text-[10px] uppercase tracking-wide text-slate-600">
+        <span className="w-16 shrink-0">Price</span>
+        <span className="w-14 shrink-0 text-right">Dist</span>
+        <span className="flex-1">Strength</span>
+        <span className="w-7 shrink-0 text-right">Tch</span>
+        <span className="hidden w-28 shrink-0 sm:block">Method</span>
+      </div>
+
+      {resistances.map((l) => (
+        <LevelRow key={`r-${l.price}-${l.method}`} level={l} />
+      ))}
+
+      {typeof price === "number" && (
+        <div className="flex items-center gap-2 py-0.5">
+          <span className="w-16 shrink-0 font-mono text-[11px] font-semibold text-sky-300">
+            ${fmt(price)}
+          </span>
+          <span className="h-px flex-1 bg-sky-500/40" />
+          <span className="text-[10px] uppercase tracking-wide text-sky-400/80">now</span>
+        </div>
+      )}
+
+      {supports.map((l) => (
+        <LevelRow key={`s-${l.price}-${l.method}`} level={l} />
+      ))}
+
+      <p className="pt-1 text-[10px] leading-snug text-slate-600">
+        Display-only. Strength = confluence of touches, method agreement, recency &amp; round
+        numbers — not yet part of the conviction score.
+      </p>
+    </div>
+  );
+}
+
 export function VerdictCard({
   v,
   defaultExpanded = false,
@@ -488,6 +592,15 @@ export function VerdictCard({
 
         {/* Collapsible sections */}
         <div className="space-y-2 pt-1">
+          {v.levels && v.levels.length > 0 && (
+            <Section
+              title="Support & Resistance"
+              count={v.levels.length}
+              defaultOpen={expanded || (!muted && isBuy)}
+            >
+              <LevelsBlock levels={v.levels} price={v.price} />
+            </Section>
+          )}
           <Section
             title="Why this trade"
             count={v.why.evidence.length}
